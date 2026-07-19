@@ -32,36 +32,45 @@ class MainWindow(QMainWindow):
         quit_callback: Callable[[], None] | None = None,
     ) -> None:
         super().__init__()
+        # Application lifecycle callbacks
         self._restart_callback = restart_callback
         self._quit_callback = quit_callback
+        # Child windows and background services
         self._help_window: HelpWindow | None = None
         self._release_update_window: ReleaseUpdateWindow | None = None
         self._serial_port_monitor = SerialPortMonitor(self)
+        # Shortcut and shutdown state
         self._shortcuts: list[QShortcut] = []
         self._closing_from_action = False
+        # Window metadata and initial layout
         self._version = get_pyproject_version(get_pyproject_file_path())
         self.setWindowTitle(APP_NAME)
         self.resize(960, 640)
         self._build_content()
+        # Application controls and background monitoring
         self._configure_shortcuts()
         self._serial_port_monitor.start()
 
     def _build_content(self) -> None:
+        # Central container and layout
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
         layout.setContentsMargins(24, 24, 24, 16)
         layout.setSpacing(16)
+        # Application title
         title_label = QLabel(APP_NAME, central_widget)
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("font-size: 26px; font-weight: 600;")
         layout.addWidget(title_label)
+        # Main actions
         updates_button = QPushButton("Check for updates", central_widget)
         updates_button.clicked.connect(self._open_release_update_window)
         layout.addWidget(updates_button, alignment=Qt.AlignmentFlag.AlignCenter)
         help_button = QPushButton("Help", central_widget)
         help_button.clicked.connect(self._open_help_window)
         layout.addWidget(help_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        # Version footer
         layout.addStretch(1)
         version_label = QLabel(f"Version {self._version}", central_widget)
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
