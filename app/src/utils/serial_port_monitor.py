@@ -1,6 +1,6 @@
 """Serial-port monitoring helpers."""
 
-from PySide6.QtCore import QObject, QTimer
+from PySide6.QtCore import QObject, Signal, QTimer
 from serial.tools import list_ports
 from serial.tools.list_ports_common import ListPortInfo
 
@@ -11,6 +11,8 @@ from src.utils.logging import logger
 # --------------------------------------------------------------------------------------------------
 class SerialPortMonitor(QObject):
     """Track available serial ports and log connection changes."""
+
+    serial_ports_changed = Signal(object)
 
     SCAN_INTERVAL_MS = 5_000
 
@@ -55,6 +57,8 @@ class SerialPortMonitor(QObject):
         for device in sorted(previous_ports.keys() - current_ports.keys()):
             logger.info(f"Serial port disconnected: {self._format_serial_port(previous_ports[device])}")
         self._serial_ports = serial_ports
+        if previous_ports.keys() != current_ports.keys():
+            self.serial_ports_changed.emit(self.serial_ports)
 
     @staticmethod
     def get_available_serial_ports() -> list[ListPortInfo]:

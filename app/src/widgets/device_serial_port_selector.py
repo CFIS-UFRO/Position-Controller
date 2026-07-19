@@ -1,0 +1,164 @@
+"""Device serial-port selection widget."""
+
+from PySide6.QtWidgets import (
+    QComboBox,
+    QGridLayout,
+    QGroupBox,
+    QLabel,
+    QSizePolicy,
+    QSpinBox,
+    QWidget,
+)
+from serial.tools.list_ports_common import ListPortInfo
+
+from src.utils.serial_port_monitor import SerialPortMonitor
+
+# --------------------------------------------------------------------------------------------------
+# Widget
+# --------------------------------------------------------------------------------------------------
+class DeviceSerialPortSelector(QGroupBox):
+    """Select a unique serial port for each configured device."""
+
+    MIN_DEVICE_COUNT = 1
+    MAX_DEVICE_COUNT = 8
+
+    def __init__(
+        self,
+        serial_port_monitor: SerialPortMonitor,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__("Device connections", parent)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        # Serial-port and per-row selection state
+        self._serial_port_monitor = serial_port_monitor
+        self._available_serial_ports = serial_port_monitor.serial_ports
+        self._device_labels: list[QLabel] = []
+        self._device_separators: list[QLabel] = []
+        self._device_selectors: list[QComboBox] = []
+        self._remembered_devices: list[str | None] = []
+        self._updating_selectors = False
+        # Label-and-control grid
+        self._grid_layout = QGridLayout(self)
+        self._grid_layout.setContentsMargins(16, 16, 16, 16)
+        self._grid_layout.setHorizontalSpacing(6)
+        self._grid_layout.setVerticalSpacing(8)
+        self._grid_layout.setColumnStretch(2, 1)
+        self._grid_layout.addWidget(QLabel("Number of devices", self), 0, 0)
+        self._grid_layout.addWidget(QLabel(":", self), 0, 1)
+        self._device_count_selector = QSpinBox(self)
+        self._device_count_selector.setRange(self.MIN_DEVICE_COUNT, self.MAX_DEVICE_COUNT)
+        self._device_count_selector.setValue(self.MIN_DEVICE_COUNT)
+        self._device_count_selector.valueChanged.connect(self._set_device_count)
+        self._grid_layout.addWidget(self._device_count_selector, 0, 2)
+        # Live serial-port synchronization
+        self._serial_port_monitor.serial_ports_changed.connect(
+            self._handle_serial_ports_changed
+        )
+        self._set_device_count(self._device_count_selector.value())
+
+    def get_selected_devices(self) -> list[str | None]:
+        """Return the currently selected serial device names in row order."""
+        selected_devices: list[str | None] = []
+        for selector in self._device_selectors:
+            device = selector.currentData()
+            selected_devices.append(device if isinstance(device, str) else None)
+        return selected_devices
+
+    def _set_device_count(self, device_count: int) -> None:
+        # Grow or shrink from the end so existing row assignments remain stable.
+        while len(self._device_labels) < device_count:
+            self._add_device_row()
+        while len(self._device_labels) > device_count:
+            self._remove_device_row()
+        self._rebuild_device_selectors()
+
+    def _add_device_row(self) -> None:
+        # Build one labeled selector and initialize its remembered assignment.
+        row_number = len(self._device_labels) + 1
+        label = QLabel(f"Device {row_number}", self)
+        separator = QLabel(":", self)
+        selector = QComboBox(self)
+        selector.addItem("None")
+        selector.currentIndexChanged.connect(self._handle_device_selection_changed)
+        self._grid_layout.addWidget(label, row_number, 0)
+        self._grid_layout.addWidget(separator, row_number, 1)
+        self._grid_layout.addWidget(selector, row_number, 2)
+        self._device_labels.append(label)
+        self._device_separators.append(separator)
+        self._device_selectors.append(selector)
+        self._remembered_devices.append(None)
+
+    def _remove_device_row(self) -> None:
+        # Removing a row also discards its current and remembered assignment.
+        label = self._device_labels.pop()
+        separator = self._device_separators.pop()
+        selector = self._device_selectors.pop()
+        self._remembered_devices.pop()
+        self._grid_layout.removeWidget(label)
+        self._grid_layout.removeWidget(separator)
+        self._grid_layout.removeWidget(selector)
+        label.deleteLater()
+        separator.deleteLater()
+        selector.deleteLater()
+
+    def _handle_serial_ports_changed(self, serial_ports: object) -> None:
+        # Accept only the monitor's expected list payload and known port objects.
+        if not isinstance(serial_ports, list):
+            return
+        self._available_serial_ports = [
+            port for port in serial_ports if isinstance(port, ListPortInfo)
+        ]
+        self._rebuild_device_selectors()
+
+    def _handle_device_selection_changed(self, _index: int) -> None:
+        # Ignore index changes caused while dropdown options are being rebuilt.
+        if self._updating_selectors:
+            return
+        selector = self.sender()
+        if not isinstance(selector, QComboBox):
+            return
+        try:
+            row_index = self._device_selectors.index(selector)
+        except ValueError:
+            return
+        # A user-selected port becomes the reconnection target; None clears it.
+        device = selector.currentData()
+        self._remembered_devices[row_index] = device if isinstance(device, str) else None
+        self._rebuild_device_selectors()
+
+    def _rebuild_device_selectors(self) -> None:
+        # Restore remembered ports only when available and not claimed by an earlier row.
+        available_devices = {port.device for port in self._available_serial_ports}
+        selected_devices: list[str | None] = []
+        claimed_devices: set[str] = set()
+        for remembered_device in self._remembered_devices:
+            if remembered_device in available_devices and remembered_device not in claimed_devices:
+                selected_devices.append(remembered_device)
+                claimed_devices.add(remembered_device)
+            else:
+                selected_devices.append(None)
+        # Rebuild each dropdown without treating automatic selections as user input.
+        self._updating_selectors = True
+        try:
+            for row_index, selector in enumerate(self._device_selectors):
+                selected_device = selected_devices[row_index]
+                reserved_devices = claimed_devices.copy()
+                if selected_device is not None:
+                    reserved_devices.remove(selected_device)
+                selector.clear()
+                selector.addItem("None")
+                # Hide ports reserved by other rows while retaining this row's selection.
+                for port in self._available_serial_ports:
+                    if port.device in reserved_devices:
+                        continue
+                    selector.addItem(self._format_serial_port(port), port.device)
+                selected_index = selector.findData(selected_device)
+                selector.setCurrentIndex(max(selected_index, 0))
+        finally:
+            self._updating_selectors = False
+
+    @staticmethod
+    def _format_serial_port(port: ListPortInfo) -> str:
+        if port.description and port.description != "n/a":
+            return f"{port.description} ({port.device})"
+        return port.device

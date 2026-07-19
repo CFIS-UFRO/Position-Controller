@@ -17,6 +17,7 @@ from src.config import APP_NAME
 from src.utils.paths import get_pyproject_file_path
 from src.utils.releases import get_pyproject_version
 from src.utils.serial_port_monitor import SerialPortMonitor
+from src.widgets.device_serial_port_selector import DeviceSerialPortSelector
 from src.windows.help_window import HelpWindow
 from src.windows.release_update_window import ReleaseUpdateWindow
 
@@ -63,6 +64,12 @@ class MainWindow(QMainWindow):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("font-size: 26px; font-weight: 600;")
         layout.addWidget(title_label)
+        # Device connections
+        self._device_serial_port_selector = DeviceSerialPortSelector(
+            self._serial_port_monitor,
+            central_widget,
+        )
+        layout.addWidget(self._device_serial_port_selector)
         # Main actions
         updates_button = QPushButton("Check for updates", central_widget)
         updates_button.clicked.connect(self._open_release_update_window)
