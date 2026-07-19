@@ -36,9 +36,7 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setOrganizationName(ORGANIZATION_NAME)
-    icon_file_path = get_icon_file_path()
-    if icon_file_path.is_file():
-        app.setWindowIcon(QIcon(str(icon_file_path)))
+    app.setWindowIcon(QIcon(str(get_icon_file_path())))
     window = MainWindow(
         restart_callback=lambda: restart_app(app),
         quit_callback=lambda: quit_app(app),
