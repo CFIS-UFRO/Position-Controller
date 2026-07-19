@@ -2,6 +2,7 @@
 
 import sys
 
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
@@ -44,6 +45,7 @@ def main() -> int:
     app.aboutToQuit.connect(about_to_quit)
     window.show()
     window.center_on_screen()
+    QTimer.singleShot(0, window.check_for_updates_on_startup)
     return app.exec()
 
 # --------------------------------------------------------------------------------------------------
