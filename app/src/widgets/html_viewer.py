@@ -63,7 +63,7 @@ class HtmlViewer(QTextBrowser):
         )
 
     def _get_theme_colors(self) -> dict[str, str]:
-        window_color = self.palette().color(QPalette.Window)
+        window_color = self.palette().color(QPalette.ColorRole.Window)
         if window_color.lightness() < 128:
             return {
                 "background": "#242629",
