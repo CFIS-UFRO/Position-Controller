@@ -25,8 +25,9 @@ def quit_app(app: QApplication) -> None:
     logger.info("Quit requested")
     app.quit()
 # --------------------------------------------------------------------------------------------------
-def about_to_quit() -> None:
-    """Record application shutdown."""
+def about_to_quit(window: MainWindow) -> None:
+    """Stop background activity and record application shutdown."""
+    window.stop_serial_port_monitor()
     logger.info(f"Closing {APP_NAME}...")
 # --------------------------------------------------------------------------------------------------
 def main() -> int:
@@ -42,7 +43,7 @@ def main() -> int:
         restart_callback=lambda: restart_app(app),
         quit_callback=lambda: quit_app(app),
     )
-    app.aboutToQuit.connect(about_to_quit)
+    app.aboutToQuit.connect(lambda: about_to_quit(window))
     window.show()
     window.center_on_screen()
     QTimer.singleShot(0, window.check_for_updates_on_startup)

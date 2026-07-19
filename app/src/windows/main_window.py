@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 from src.config import APP_NAME
 from src.utils.paths import get_pyproject_file_path
 from src.utils.releases import get_pyproject_version
+from src.utils.serial_port_monitor import SerialPortMonitor
 from src.windows.help_window import HelpWindow
 from src.windows.release_update_window import ReleaseUpdateWindow
 
@@ -35,6 +36,7 @@ class MainWindow(QMainWindow):
         self._quit_callback = quit_callback
         self._help_window: HelpWindow | None = None
         self._release_update_window: ReleaseUpdateWindow | None = None
+        self._serial_port_monitor = SerialPortMonitor(self)
         self._shortcuts: list[QShortcut] = []
         self._closing_from_action = False
         self._version = get_pyproject_version(get_pyproject_file_path())
@@ -42,6 +44,7 @@ class MainWindow(QMainWindow):
         self.resize(960, 640)
         self._build_content()
         self._configure_shortcuts()
+        self._serial_port_monitor.start()
 
     def _build_content(self) -> None:
         central_widget = QWidget(self)
@@ -91,6 +94,10 @@ class MainWindow(QMainWindow):
     def check_for_updates_on_startup(self) -> None:
         """Check for a new release without showing current-version or error dialogs."""
         self._get_release_update_window().check_for_updates_on_startup()
+
+    def stop_serial_port_monitor(self) -> None:
+        """Stop monitoring for serial-port changes."""
+        self._serial_port_monitor.stop()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """Route window-manager closes through the configured quit callback."""
