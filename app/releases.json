@@ -1,4 +1,20 @@
 {
   "releases": [
+    {
+      "version": "0.2.0",
+      "created_at_utc": "2026-07-19T19:41:08.544735+00:00",
+      "changes": [
+        "First release of Position Controller",
+        "Added cross-platform launchers for Linux, macOS, and Windows",
+        "Added automatic Python runtime and dependency setup on first launch",
+        "Added a desktop interface",
+        "Added built-in release checking and secure update installation",
+        "Added searchable in-app help documentation",
+        "Added application restart and quit keyboard shortcuts",
+        "Added structured logging and temporary-file handling",
+        "Added the official application icon",
+        "Added automated GitHub release packaging and release-history support"
+      ]
+    }
   ]
 }
