@@ -20,6 +20,13 @@ from src.utils.paths import get_help_dir_path
 from src.widgets.html_viewer import HtmlViewer, HtmlViewerStyle
 
 # --------------------------------------------------------------------------------------------------
+# Item data roles
+# --------------------------------------------------------------------------------------------------
+MANUAL_ID_ROLE = int(Qt.ItemDataRole.UserRole)
+MANUAL_FILE_ROLE = MANUAL_ID_ROLE + 1
+MANUAL_SEARCH_TEXT_ROLE = MANUAL_ID_ROLE + 2
+
+# --------------------------------------------------------------------------------------------------
 # Widget
 # --------------------------------------------------------------------------------------------------
 class HelpManuals(QGroupBox):
@@ -31,12 +38,12 @@ class HelpManuals(QGroupBox):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._manuals = get_help_manuals()
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(0)
-        splitter = QSplitter(Qt.Horizontal, self)
+        splitter = QSplitter(Qt.Orientation.Horizontal, self)
         layout.addWidget(splitter)
         left_panel = QWidget(splitter)
         left_panel.setMinimumWidth(220)
@@ -70,8 +77,8 @@ class HelpManuals(QGroupBox):
         splitter.setStretchFactor(1, 1)
         for manual in self._manuals:
             item = QListWidgetItem(manual["title"], self._manual_list)
-            item.setData(Qt.UserRole, manual["id"])
-            item.setData(Qt.UserRole + 1, manual["file"])
+            item.setData(MANUAL_ID_ROLE, manual["id"])
+            item.setData(MANUAL_FILE_ROLE, manual["file"])
             manual_file_path = help_dir_path / manual["file"]
             try:
                 raw_html = manual_file_path.read_text(encoding="utf-8")
@@ -80,7 +87,7 @@ class HelpManuals(QGroupBox):
             else:
                 searchable_text = re.sub(r"<[^>]+>", "", raw_html)
                 searchable_text = re.sub(r"\s+", " ", searchable_text).strip()
-            item.setData(Qt.UserRole + 2, searchable_text)
+            item.setData(MANUAL_SEARCH_TEXT_ROLE, searchable_text)
         if initial_manual_id is not None:
             self.open_manual(initial_manual_id)
         elif self._manual_list.count() > 0:
@@ -90,7 +97,7 @@ class HelpManuals(QGroupBox):
         """Select a help manual by identifier."""
         for index in range(self._manual_list.count()):
             item = self._manual_list.item(index)
-            if item is not None and item.data(Qt.UserRole) == manual_id:
+            if item is not None and item.data(MANUAL_ID_ROLE) == manual_id:
                 self._manual_list.setCurrentItem(item)
                 return
         self._manual_list.setCurrentRow(-1)
@@ -102,7 +109,7 @@ class HelpManuals(QGroupBox):
         current_item = self._manual_list.currentItem()
         if current_item is None:
             return "none"
-        return f"{current_item.text()} ({current_item.data(Qt.UserRole)})"
+        return f"{current_item.text()} ({current_item.data(MANUAL_ID_ROLE)})"
 
     def _reset_search_timer(self) -> None:
         self._search_timer.start(300)
@@ -115,7 +122,7 @@ class HelpManuals(QGroupBox):
             if item is None:
                 continue
             title_match = search_text in item.text().lower()
-            content_match = search_text in str(item.data(Qt.UserRole + 2) or "").lower()
+            content_match = search_text in str(item.data(MANUAL_SEARCH_TEXT_ROLE) or "").lower()
             item.setHidden(not (title_match or content_match))
 
     def _handle_current_manual_changed(
@@ -126,7 +133,7 @@ class HelpManuals(QGroupBox):
         if current is None:
             self._manual_viewer.clear()
             return
-        self._manual_viewer.setSource(QUrl(str(current.data(Qt.UserRole + 1))))
+        self._manual_viewer.setSource(QUrl(str(current.data(MANUAL_FILE_ROLE))))
 
     def _handle_manual_link_clicked(self, url: QUrl) -> None:
         if url.scheme() in {"http", "https"}:
@@ -139,7 +146,7 @@ class HelpManuals(QGroupBox):
     def _select_manual_file(self, manual_file: str) -> bool:
         for index in range(self._manual_list.count()):
             item = self._manual_list.item(index)
-            if item is not None and item.data(Qt.UserRole + 1) == manual_file:
+            if item is not None and item.data(MANUAL_FILE_ROLE) == manual_file:
                 self._manual_list.setCurrentItem(item)
                 return True
         return False

@@ -17,7 +17,7 @@ class CloseButtonWidget(QWidget):
         self._close_button = QPushButton("Close", self)
         self._close_button.setDefault(True)
         self._close_button.clicked.connect(self._close_window)
-        layout.addWidget(self._close_button, 0, Qt.AlignCenter)
+        layout.addWidget(self._close_button, 0, Qt.AlignmentFlag.AlignCenter)
         layout.addStretch(1)
         QTimer.singleShot(0, self._close_button.setFocus)
 

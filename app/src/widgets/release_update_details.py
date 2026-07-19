@@ -13,7 +13,7 @@ class ReleaseUpdateDetails(QGroupBox):
 
     def __init__(self, release_update: ReleaseUpdate, parent: QWidget | None = None) -> None:
         super().__init__("Release information", parent)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
