@@ -122,9 +122,9 @@ class ReleaseUpdateChecker(QObject):
             Qt.ConnectionType.QueuedConnection,
         )
         worker.finished.connect(thread.quit)
-        worker.finished.connect(worker.deleteLater)
-        thread.finished.connect(self._finish)
+        thread.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
+        thread.destroyed.connect(self._finish)
         self._thread = thread
         self._worker = worker
         thread.start()
