@@ -47,7 +47,7 @@ export UV_PROJECT_ENVIRONMENT
 # Developer release
 # --------------------------------------------------------------------------------------------------
 if [ "${1:-}" = "release" ]; then
-    "$UV_BIN" run --locked python -m "$RELEASE_MODULE"
+    "$UV_BIN" run python -m "$RELEASE_MODULE"
     exit $?
 fi
 
@@ -55,7 +55,7 @@ fi
 # Application launch and restart
 # --------------------------------------------------------------------------------------------------
 while true; do
-    if "$UV_BIN" run --locked python "$MAIN_FILE"; then
+    if "$UV_BIN" run python "$MAIN_FILE"; then
         exit_code=0
     else
         exit_code=$?

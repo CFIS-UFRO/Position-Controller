@@ -46,7 +46,7 @@ REM ----------------------------------------------------------------------------
 if /I "%~1"=="release" goto release
 goto launch
 :release
-"%UV_BIN%" run --locked python -m "%RELEASE_MODULE%"
+"%UV_BIN%" run python -m "%RELEASE_MODULE%"
 set "EXIT_CODE=%ERRORLEVEL%"
 if not "%EXIT_CODE%"=="0" pause
 exit /b %EXIT_CODE%
@@ -55,7 +55,7 @@ REM ----------------------------------------------------------------------------
 REM Application launch and restart
 REM --------------------------------------------------------------------------------------------------
 :launch
-"%UV_BIN%" run --locked python "%MAIN_FILE%"
+"%UV_BIN%" run python "%MAIN_FILE%"
 set "EXIT_CODE=%ERRORLEVEL%"
 if "%EXIT_CODE%"=="%RESTART_EXIT_CODE%" (
     echo Restarting Position Controller...

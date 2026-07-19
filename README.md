@@ -35,7 +35,7 @@ With `uv` already installed:
 
 ```bash
 cd app
-uv run --locked python main.py
+uv run python main.py
 ```
 
 ## Releases and updates
