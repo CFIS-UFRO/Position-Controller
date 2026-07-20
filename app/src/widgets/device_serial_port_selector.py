@@ -27,7 +27,7 @@ class DeviceSerialPortSelector(QGroupBox):
         serial_port_monitor: SerialPortMonitor,
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__("Device connections", parent)
+        super().__init__("Devices Selection", parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         # Serial-port and per-row selection state
         self._serial_port_monitor = serial_port_monitor
