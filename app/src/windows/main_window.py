@@ -18,6 +18,7 @@ from src.utils.paths import get_pyproject_file_path
 from src.utils.releases import get_pyproject_version
 from src.utils.serial_port_monitor import SerialPortMonitor
 from src.widgets.device_serial_port_selector import DeviceSerialPortSelector
+from src.widgets.serial_communication_control import SerialCommunicationControl
 from src.windows.help_window import HelpWindow
 from src.windows.release_update_window import ReleaseUpdateWindow
 
@@ -70,6 +71,12 @@ class MainWindow(QMainWindow):
             central_widget,
         )
         layout.addWidget(self._device_serial_port_selector)
+        self._serial_communication_control = SerialCommunicationControl(
+            self._device_serial_port_selector,
+            self._serial_port_monitor,
+            central_widget,
+        )
+        layout.addWidget(self._serial_communication_control)
         # Main actions
         updates_button = QPushButton("Check for updates", central_widget)
         updates_button.clicked.connect(self._open_release_update_window)
@@ -114,6 +121,10 @@ class MainWindow(QMainWindow):
     def stop_serial_port_monitor(self) -> None:
         """Stop monitoring for serial-port changes."""
         self._serial_port_monitor.stop()
+
+    def stop_serial_communication(self) -> None:
+        """Close all active serial-port connections."""
+        self._serial_communication_control.stop_communication()
 
     def closeEvent(self, event: QCloseEvent) -> None:
         """Route window-manager closes through the configured quit callback."""

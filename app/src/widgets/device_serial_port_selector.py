@@ -1,5 +1,6 @@
 """Device serial-port selection widget."""
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QGridLayout,
@@ -19,6 +20,8 @@ from src.utils.serial_port_monitor import SerialPortMonitor
 class DeviceSerialPortSelector(QGroupBox):
     """Select a unique serial port for each configured device."""
 
+    selected_devices_changed = Signal(object)
+
     MIN_DEVICE_COUNT = 1
     MAX_DEVICE_COUNT = 8
 
@@ -37,6 +40,8 @@ class DeviceSerialPortSelector(QGroupBox):
         self._device_selectors: list[QComboBox] = []
         self._remembered_serial_ports: list[ListPortInfo | None] = []
         self._updating_selectors = False
+        self._selection_enabled = True
+        self._last_emitted_selected_devices: list[str | None] = []
         # Label-and-control grid
         self._grid_layout = QGridLayout(self)
         self._grid_layout.setContentsMargins(16, 16, 16, 16)
@@ -64,6 +69,13 @@ class DeviceSerialPortSelector(QGroupBox):
             selected_devices.append(device if isinstance(device, str) else None)
         return selected_devices
 
+    def set_selection_enabled(self, enabled: bool) -> None:
+        """Enable or disable the device count and serial-port selectors."""
+        self._selection_enabled = enabled
+        self._device_count_selector.setEnabled(enabled)
+        for selector in self._device_selectors:
+            selector.setEnabled(enabled)
+
     def _set_device_count(self, device_count: int) -> None:
         # Grow or shrink from the end so existing row assignments remain stable.
         while len(self._device_labels) < device_count:
@@ -79,6 +91,7 @@ class DeviceSerialPortSelector(QGroupBox):
         separator = QLabel(":", self)
         selector = QComboBox(self)
         selector.addItem("None")
+        selector.setEnabled(self._selection_enabled)
         selector.currentIndexChanged.connect(self._handle_device_selection_changed)
         self._grid_layout.addWidget(label, row_number, 0)
         self._grid_layout.addWidget(separator, row_number, 1)
@@ -174,6 +187,10 @@ class DeviceSerialPortSelector(QGroupBox):
                     selector.setCurrentIndex(0)
         finally:
             self._updating_selectors = False
+        selected_devices = self.get_selected_devices()
+        if selected_devices != self._last_emitted_selected_devices:
+            self._last_emitted_selected_devices = selected_devices
+            self.selected_devices_changed.emit(selected_devices)
 
     @staticmethod
     def _format_serial_port(port: ListPortInfo, *, disconnected: bool = False) -> str:

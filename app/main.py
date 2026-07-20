@@ -27,6 +27,7 @@ def quit_app(app: QApplication) -> None:
 # --------------------------------------------------------------------------------------------------
 def about_to_quit(window: MainWindow) -> None:
     """Stop background activity and record application shutdown."""
+    window.stop_serial_communication()
     window.stop_serial_port_monitor()
     logger.info(f"Closing {APP_NAME}...")
 # --------------------------------------------------------------------------------------------------
