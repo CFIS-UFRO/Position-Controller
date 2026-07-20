@@ -17,6 +17,7 @@ UV_PYTHON_INSTALL_DIR="$UV_DIR/python"
 UV_PROJECT_ENVIRONMENT="$UV_DIR/venv"
 MAIN_FILE="$APP_DIR/main.py"
 RELEASE_MODULE="scripts.create_release"
+FAKE_SERIAL_PORT_MODULE="scripts.fake_serial_port"
 cd "$APP_DIR"
 
 # --------------------------------------------------------------------------------------------------
@@ -48,6 +49,14 @@ export UV_PROJECT_ENVIRONMENT
 # --------------------------------------------------------------------------------------------------
 if [ "${1:-}" = "release" ]; then
     "$UV_BIN" run python -m "$RELEASE_MODULE"
+    exit $?
+fi
+
+# --------------------------------------------------------------------------------------------------
+# Developer fake serial port
+# --------------------------------------------------------------------------------------------------
+if [ "${1:-}" = "fake-serial-port" ]; then
+    "$UV_BIN" run python -m "$FAKE_SERIAL_PORT_MODULE"
     exit $?
 fi
 

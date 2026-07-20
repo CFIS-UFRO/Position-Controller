@@ -1,10 +1,14 @@
 """Serial-port monitoring helpers."""
 
+import json
+import os
+
 from PySide6.QtCore import QObject, Signal, QTimer
 from serial.tools import list_ports
 from serial.tools.list_ports_common import ListPortInfo
 
 from src.utils.logging import logger
+from src.utils.paths import get_fake_serial_ports_dir_path
 
 # --------------------------------------------------------------------------------------------------
 # Port monitoring
@@ -62,8 +66,56 @@ class SerialPortMonitor(QObject):
 
     @staticmethod
     def get_available_serial_ports() -> list[ListPortInfo]:
-        """Return all available serial ports with their discovered metadata."""
-        return sorted(list_ports.comports())
+        """Return hardware and registered fake serial ports."""
+        serial_ports = {port.device: port for port in list_ports.comports()}
+        for port in SerialPortMonitor._get_registered_fake_serial_ports():
+            serial_ports.setdefault(port.device, port)
+        return sorted(serial_ports.values())
+
+    @staticmethod
+    def _get_registered_fake_serial_ports() -> list[ListPortInfo]:
+        fake_serial_ports: list[ListPortInfo] = []
+        registration_dir_path = get_fake_serial_ports_dir_path()
+        if not registration_dir_path.is_dir():
+            return fake_serial_ports
+        for registration_file_path in sorted(registration_dir_path.glob("*.json")):
+            try:
+                registration = json.loads(registration_file_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(registration, dict):
+                continue
+            process_id = registration.get("pid")
+            device = registration.get("device")
+            description = registration.get("description")
+            if (
+                not isinstance(process_id, int)
+                or isinstance(process_id, bool)
+                or process_id <= 0
+                or not isinstance(device, str)
+                or not device
+                or not isinstance(description, str)
+                or not description
+                or not os.path.exists(device)
+                or not SerialPortMonitor._is_process_running(process_id)
+            ):
+                continue
+            port = ListPortInfo(device)
+            port.description = description
+            fake_serial_ports.append(port)
+        return fake_serial_ports
+
+    @staticmethod
+    def _is_process_running(process_id: int) -> bool:
+        try:
+            os.kill(process_id, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        except OSError:
+            return False
+        return True
 
     @staticmethod
     def _format_serial_port(port: ListPortInfo) -> str:

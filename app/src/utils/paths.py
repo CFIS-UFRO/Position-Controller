@@ -14,6 +14,7 @@ ASSETS_DIR: Path = SRC_DIR / "assets"
 HELP_DIR: Path = ASSETS_DIR / "help"
 LOGS_DIR: Path = APP_DIR / "logs"
 USER_DATA_DIR: Path = APP_DIR / "usr"
+FAKE_SERIAL_PORTS_DIR: Path = USER_DATA_DIR / "fake_serial_ports"
 TMP_DIR: Path = APP_DIR / "tmp"
 
 # --------------------------------------------------------------------------------------------------
@@ -60,6 +61,10 @@ def get_logs_dir_path() -> Path:
 def get_user_data_dir_path() -> Path:
     """Return the local user-data directory."""
     return USER_DATA_DIR
+# --------------------------------------------------------------------------------------------------
+def get_fake_serial_ports_dir_path() -> Path:
+    """Return the directory containing active fake serial-port registrations."""
+    return FAKE_SERIAL_PORTS_DIR
 # --------------------------------------------------------------------------------------------------
 def get_tmp_dir_path() -> Path:
     """Return the temporary-files directory."""
