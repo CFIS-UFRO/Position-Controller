@@ -6,6 +6,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent, QCursor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
+    QFrame,
+    QHBoxLayout,
     QLabel,
     QMainWindow,
     QPushButton,
@@ -65,25 +67,47 @@ class MainWindow(QMainWindow):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("font-size: 26px; font-weight: 600;")
         layout.addWidget(title_label)
-        # Device connections
+        separator = QFrame(central_widget)
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(separator)
+        # Main actions
+        actions_layout = QHBoxLayout()
+        actions_layout.setContentsMargins(0, 0, 0, 0)
+        actions_layout.setSpacing(8)
+        actions_layout.addStretch(1)
+        updates_button = QPushButton("Check for updates", central_widget)
+        updates_button.clicked.connect(self._open_release_update_window)
+        actions_layout.addWidget(updates_button)
+        help_button = QPushButton("Help", central_widget)
+        help_button.clicked.connect(self._open_help_window)
+        actions_layout.addWidget(help_button)
+        actions_layout.addStretch(1)
+        layout.addLayout(actions_layout)
+        # Main container
+        main_container_widget = QWidget(central_widget)
+        main_container_layout = QVBoxLayout(main_container_widget)
+        main_container_layout.setContentsMargins(0, 0, 0, 0)
+        main_container_layout.setSpacing(16)
         self._device_serial_port_selector = DeviceSerialPortSelector(
             self._serial_port_monitor,
-            central_widget,
+            main_container_widget,
         )
-        layout.addWidget(self._device_serial_port_selector)
+        main_container_layout.addWidget(self._device_serial_port_selector)
         self._serial_communication_control = SerialCommunicationControl(
             self._device_serial_port_selector,
             self._serial_port_monitor,
-            central_widget,
+            main_container_widget,
         )
-        layout.addWidget(self._serial_communication_control)
-        # Main actions
-        updates_button = QPushButton("Check for updates", central_widget)
-        updates_button.clicked.connect(self._open_release_update_window)
-        layout.addWidget(updates_button, alignment=Qt.AlignmentFlag.AlignCenter)
-        help_button = QPushButton("Help", central_widget)
-        help_button.clicked.connect(self._open_help_window)
-        layout.addWidget(help_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        main_container_layout.addWidget(self._serial_communication_control)
+        main_container_layout.addStretch(1)
+        main_container_row = QHBoxLayout()
+        main_container_row.setContentsMargins(0, 0, 0, 0)
+        main_container_row.setSpacing(0)
+        main_container_row.addStretch(1)
+        main_container_row.addWidget(main_container_widget)
+        main_container_row.addStretch(1)
+        layout.addLayout(main_container_row, 1)
         # Version footer
         layout.addStretch(1)
         version_label = QLabel(f"Version {self._version}", central_widget)

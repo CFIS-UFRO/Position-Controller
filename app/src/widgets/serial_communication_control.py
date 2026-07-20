@@ -44,7 +44,7 @@ class SerialCommunicationControl(QGroupBox):
         self._communication_active = False
         # Status table and communication control
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(12)
         self._status_table = QTableWidget(0, 2, self)
         self._status_table.setHorizontalHeaderLabels(["Serial port", "Status"])

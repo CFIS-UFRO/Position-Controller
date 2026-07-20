@@ -44,7 +44,7 @@ class DeviceSerialPortSelector(QGroupBox):
         self._last_emitted_selected_devices: list[str | None] = []
         # Label-and-control grid
         self._grid_layout = QGridLayout(self)
-        self._grid_layout.setContentsMargins(16, 16, 16, 16)
+        self._grid_layout.setContentsMargins(8, 8, 8, 8)
         self._grid_layout.setHorizontalSpacing(6)
         self._grid_layout.setVerticalSpacing(8)
         self._grid_layout.setColumnStretch(2, 1)
