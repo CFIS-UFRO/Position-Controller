@@ -1,21 +1,20 @@
 """Serial communication controls and connection-status display."""
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QAbstractItemView,
+    QFrame,
+    QGridLayout,
     QGroupBox,
-    QHeaderView,
+    QLabel,
     QPushButton,
     QSizePolicy,
-    QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
 from src.utils.logging import logger
 from src.utils.serial_port_monitor import SerialPortMonitor
+from src.widgets.badge_widget import BadgeWidget
 from src.widgets.device_serial_port_selector import DeviceSerialPortSelector
 
 # --------------------------------------------------------------------------------------------------
@@ -23,13 +22,6 @@ from src.widgets.device_serial_port_selector import DeviceSerialPortSelector
 # --------------------------------------------------------------------------------------------------
 class SerialCommunicationControl(QGroupBox):
     """Open selected serial ports and display their communication status."""
-
-    _DISCONNECTED_BACKGROUND = QColor("#e0e0e0")
-    _DISCONNECTED_FOREGROUND = QColor("#424242")
-    _ERROR_BACKGROUND = QColor("#ffcdd2")
-    _ERROR_FOREGROUND = QColor("#b71c1c")
-    _CONNECTED_BACKGROUND = QColor("#c8e6c9")
-    _CONNECTED_FOREGROUND = QColor("#1b5e20")
 
     def __init__(
         self,
@@ -42,19 +34,17 @@ class SerialCommunicationControl(QGroupBox):
         self._device_selector = device_selector
         self._serial_port_monitor = serial_port_monitor
         self._communication_active = False
-        # Status table and communication control
+        # Status display and communication control
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(12)
-        self._status_table = QTableWidget(0, 2, self)
-        self._status_table.setHorizontalHeaderLabels(["Serial port", "Status"])
-        self._status_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self._status_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-        self._status_table.verticalHeader().setVisible(False)
-        horizontal_header = self._status_table.horizontalHeader()
-        horizontal_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        horizontal_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        layout.addWidget(self._status_table)
+        self._status_widget = QWidget(self)
+        self._status_layout = QGridLayout(self._status_widget)
+        self._status_layout.setContentsMargins(0, 0, 0, 0)
+        self._status_layout.setHorizontalSpacing(6)
+        self._status_layout.setVerticalSpacing(8)
+        self._status_layout.setColumnStretch(2, 1)
+        layout.addWidget(self._status_widget)
         self._communication_button = QPushButton("Start", self)
         self._communication_button.clicked.connect(self._toggle_communication)
         layout.addWidget(
@@ -68,7 +58,7 @@ class SerialCommunicationControl(QGroupBox):
         self._serial_port_monitor.serial_ports_changed.connect(
             self._handle_serial_ports_changed
         )
-        self._refresh_status_table()
+        self._refresh_status_display()
 
     @property
     def is_communication_active(self) -> bool:
@@ -83,7 +73,7 @@ class SerialCommunicationControl(QGroupBox):
         self._serial_port_monitor.close_all_connections()
         self._device_selector.set_selection_enabled(True)
         self._communication_button.setText("Start")
-        self._refresh_status_table()
+        self._refresh_status_display()
         logger.info("Serial communication stopped")
         return True
 
@@ -105,84 +95,107 @@ class SerialCommunicationControl(QGroupBox):
         if self._communication_active:
             self._synchronize_connections(selected_devices)
             return
-        self._refresh_status_table(selected_devices)
+        self._refresh_status_display(selected_devices)
 
     def _handle_serial_ports_changed(self, _serial_ports: object) -> None:
         selected_devices = self._get_selected_devices()
         if self._communication_active:
             self._synchronize_connections(selected_devices)
             return
-        self._refresh_status_table(selected_devices)
+        self._refresh_status_display(selected_devices)
 
     def _synchronize_connections(self, selected_devices: list[str]) -> None:
         self._serial_port_monitor.synchronize_connections(selected_devices)
-        self._refresh_status_table(selected_devices)
+        self._refresh_status_display(selected_devices)
 
-    def _refresh_status_table(self, selected_devices: list[str] | None = None) -> None:
+    def _refresh_status_display(
+        self,
+        selected_devices: list[str] | None = None,
+    ) -> None:
         if selected_devices is None:
             selected_devices = self._get_selected_devices()
-        self._status_table.clearSpans()
+        self._clear_status_display()
+        self._status_layout.addWidget(QLabel("Serial port", self._status_widget), 0, 0)
+        self._status_layout.addWidget(QLabel("Status", self._status_widget), 0, 2)
+        header_separator = QFrame(self._status_widget)
+        header_separator.setFrameShape(QFrame.Shape.HLine)
+        header_separator.setFrameShadow(QFrame.Shadow.Sunken)
+        self._status_layout.addWidget(header_separator, 1, 0, 1, 3)
         if not selected_devices:
-            self._status_table.setRowCount(1)
-            empty_item = QTableWidgetItem("No serial ports selected")
-            empty_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty_item.setForeground(self._DISCONNECTED_FOREGROUND)
-            self._status_table.setItem(0, 0, empty_item)
-            self._status_table.setSpan(0, 0, 1, 2)
-            self._resize_status_table(1)
+            empty_label = QLabel("No serial ports selected", self._status_widget)
+            empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self._status_layout.addWidget(
+                empty_label,
+                2,
+                0
+            )
             self._communication_button.setEnabled(False)
             return
-        self._status_table.setRowCount(len(selected_devices))
-        for row_index, device in enumerate(selected_devices):
-            device_item = QTableWidgetItem(device)
-            status, background, foreground, tooltip = self._get_device_status(device)
-            status_item = QTableWidgetItem(status)
-            status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            status_item.setBackground(background)
-            status_item.setForeground(foreground)
-            if tooltip:
-                status_item.setToolTip(tooltip)
-            self._status_table.setItem(row_index, 0, device_item)
-            self._status_table.setItem(row_index, 1, status_item)
-        self._resize_status_table(len(selected_devices))
+        serial_ports_by_device = {
+            port.device: port for port in self._serial_port_monitor.serial_ports
+        }
+        for row_index, device in enumerate(selected_devices, start=2):
+            status, color, tooltip = self._get_device_status(device)
+            serial_port = serial_ports_by_device.get(device)
+            label_text = (
+                SerialPortMonitor.format_serial_port(serial_port)
+                if serial_port is not None
+                else device
+            )
+            self._add_status_row(row_index, label_text, status, color, tooltip)
         self._communication_button.setEnabled(
             self._communication_active or bool(selected_devices)
         )
 
-    def _resize_status_table(self, row_count: int) -> None:
-        table_height = (
-            self._status_table.horizontalHeader().height()
-            + self._status_table.verticalHeader().defaultSectionSize() * row_count
-            + self._status_table.frameWidth() * 2
-        )
-        self._status_table.setFixedHeight(table_height)
+    def _add_status_row(
+        self,
+        row_index: int,
+        label_text: str,
+        status: str,
+        color: str,
+        tooltip: str,
+    ) -> None:
+        label = QLabel(label_text, self._status_widget)
+        separator = QLabel(":", self._status_widget)
+        status_badge = BadgeWidget(status, color, self._status_widget)
+        status_badge.setMinimumWidth(100)
+        if tooltip:
+            status_badge.setToolTip(tooltip)
+        self._status_layout.addWidget(label, row_index, 0)
+        self._status_layout.addWidget(separator, row_index, 1)
+        self._status_layout.addWidget(status_badge, row_index, 2)
 
-    def _get_device_status(self, device: str) -> tuple[str, QColor, QColor, str]:
+    def _clear_status_display(self) -> None:
+        while self._status_layout.count():
+            layout_item = self._status_layout.takeAt(0)
+            if layout_item is None:
+                continue
+            widget = layout_item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+    def _get_device_status(self, device: str) -> tuple[str, str, str]:
         if not self._communication_active:
             return (
                 "Disconnected",
-                self._DISCONNECTED_BACKGROUND,
-                self._DISCONNECTED_FOREGROUND,
+                "gray",
                 "Communication has not been started.",
             )
         if not self._serial_port_monitor.is_device_available(device):
             return (
                 "Disconnected",
-                self._ERROR_BACKGROUND,
-                self._ERROR_FOREGROUND,
+                "red",
                 "The selected serial port is not available.",
             )
         if self._serial_port_monitor.is_device_connected(device):
             return (
                 "Connected",
-                self._CONNECTED_BACKGROUND,
-                self._CONNECTED_FOREGROUND,
+                "green",
                 "The serial port is open and available.",
             )
         return (
             "Not working",
-            self._ERROR_BACKGROUND,
-            self._ERROR_FOREGROUND,
+            "red",
             self._serial_port_monitor.get_connection_error(device)
             or "The serial port could not be opened.",
         )
