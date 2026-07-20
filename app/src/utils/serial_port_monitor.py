@@ -128,9 +128,11 @@ class SerialPortMonitor(QObject):
         connected_devices = sorted(current_ports.keys() - previous_ports.keys())
         disconnected_devices = sorted(previous_ports.keys() - current_ports.keys())
         for device in connected_devices:
-            logger.info(f"Serial port connected: {self._format_serial_port(current_ports[device])}")
+            formatted_port = self.format_serial_port(current_ports[device])
+            logger.info(f"Serial port connected: {formatted_port}")
         for device in disconnected_devices:
-            logger.info(f"Serial port disconnected: {self._format_serial_port(previous_ports[device])}")
+            formatted_port = self.format_serial_port(previous_ports[device])
+            logger.info(f"Serial port disconnected: {formatted_port}")
         self._serial_ports = serial_ports
         for device in disconnected_devices:
             was_connected = self.is_device_connected(device)
@@ -195,7 +197,16 @@ class SerialPortMonitor(QObject):
         return True
 
     @staticmethod
-    def _format_serial_port(port: ListPortInfo) -> str:
+    def format_serial_port(
+        port: ListPortInfo,
+        *,
+        disconnected: bool = False,
+    ) -> str:
+        """Return a user-facing serial-port label."""
         if port.description and port.description != "n/a":
-            return f"{port.description} ({port.device})"
-        return port.device
+            formatted_port = f"{port.description} ({port.device})"
+        else:
+            formatted_port = port.device
+        if disconnected:
+            return f"[Disconnected] {formatted_port}"
+        return formatted_port

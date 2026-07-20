@@ -174,12 +174,18 @@ class DeviceSerialPortSelector(QGroupBox):
                 for port in self._available_serial_ports:
                     if port.device in reserved_devices:
                         continue
-                    selector.addItem(self._format_serial_port(port), port.device)
+                    selector.addItem(
+                        SerialPortMonitor.format_serial_port(port),
+                        port.device,
+                    )
                 if selected_device is not None:
                     selector.setCurrentIndex(selector.findData(selected_device))
                 elif remembered_port is not None:
                     selector.addItem(
-                        self._format_serial_port(remembered_port, disconnected=True),
+                        SerialPortMonitor.format_serial_port(
+                            remembered_port,
+                            disconnected=True,
+                        ),
                         remembered_port.device,
                     )
                     selector.setCurrentIndex(selector.count() - 1)
@@ -191,13 +197,3 @@ class DeviceSerialPortSelector(QGroupBox):
         if selected_devices != self._last_emitted_selected_devices:
             self._last_emitted_selected_devices = selected_devices
             self.selected_devices_changed.emit(selected_devices)
-
-    @staticmethod
-    def _format_serial_port(port: ListPortInfo, *, disconnected: bool = False) -> str:
-        if port.description and port.description != "n/a":
-            formatted_port = f"{port.description} ({port.device})"
-        else:
-            formatted_port = port.device
-        if disconnected:
-            return f"[Disconnected] {formatted_port}"
-        return formatted_port
