@@ -35,7 +35,7 @@ class DeviceSerialPortSelector(QGroupBox):
         self._device_labels: list[QLabel] = []
         self._device_separators: list[QLabel] = []
         self._device_selectors: list[QComboBox] = []
-        self._remembered_devices: list[str | None] = []
+        self._remembered_serial_ports: list[ListPortInfo | None] = []
         self._updating_selectors = False
         # Label-and-control grid
         self._grid_layout = QGridLayout(self)
@@ -86,14 +86,14 @@ class DeviceSerialPortSelector(QGroupBox):
         self._device_labels.append(label)
         self._device_separators.append(separator)
         self._device_selectors.append(selector)
-        self._remembered_devices.append(None)
+        self._remembered_serial_ports.append(None)
 
     def _remove_device_row(self) -> None:
         # Removing a row also discards its current and remembered assignment.
         label = self._device_labels.pop()
         separator = self._device_separators.pop()
         selector = self._device_selectors.pop()
-        self._remembered_devices.pop()
+        self._remembered_serial_ports.pop()
         self._grid_layout.removeWidget(label)
         self._grid_layout.removeWidget(separator)
         self._grid_layout.removeWidget(selector)
@@ -123,18 +123,27 @@ class DeviceSerialPortSelector(QGroupBox):
             return
         # A user-selected port becomes the reconnection target; None clears it.
         device = selector.currentData()
-        self._remembered_devices[row_index] = device if isinstance(device, str) else None
+        self._remembered_serial_ports[row_index] = next(
+            (port for port in self._available_serial_ports if port.device == device),
+            None,
+        )
         self._rebuild_device_selectors()
 
     def _rebuild_device_selectors(self) -> None:
         # Restore remembered ports only when available and not claimed by an earlier row.
-        available_devices = {port.device for port in self._available_serial_ports}
+        available_ports = {port.device: port for port in self._available_serial_ports}
         selected_devices: list[str | None] = []
         claimed_devices: set[str] = set()
-        for remembered_device in self._remembered_devices:
-            if remembered_device in available_devices and remembered_device not in claimed_devices:
+        for row_index, remembered_port in enumerate(self._remembered_serial_ports):
+            remembered_device = remembered_port.device if remembered_port is not None else None
+            if (
+                remembered_device is not None
+                and remembered_device in available_ports
+                and remembered_device not in claimed_devices
+            ):
                 selected_devices.append(remembered_device)
                 claimed_devices.add(remembered_device)
+                self._remembered_serial_ports[row_index] = available_ports[remembered_device]
             else:
                 selected_devices.append(None)
         # Rebuild each dropdown without treating automatic selections as user input.
@@ -142,6 +151,7 @@ class DeviceSerialPortSelector(QGroupBox):
         try:
             for row_index, selector in enumerate(self._device_selectors):
                 selected_device = selected_devices[row_index]
+                remembered_port = self._remembered_serial_ports[row_index]
                 reserved_devices = claimed_devices.copy()
                 if selected_device is not None:
                     reserved_devices.remove(selected_device)
@@ -152,13 +162,25 @@ class DeviceSerialPortSelector(QGroupBox):
                     if port.device in reserved_devices:
                         continue
                     selector.addItem(self._format_serial_port(port), port.device)
-                selected_index = selector.findData(selected_device)
-                selector.setCurrentIndex(max(selected_index, 0))
+                if selected_device is not None:
+                    selector.setCurrentIndex(selector.findData(selected_device))
+                elif remembered_port is not None:
+                    selector.addItem(
+                        self._format_serial_port(remembered_port, disconnected=True),
+                        remembered_port.device,
+                    )
+                    selector.setCurrentIndex(selector.count() - 1)
+                else:
+                    selector.setCurrentIndex(0)
         finally:
             self._updating_selectors = False
 
     @staticmethod
-    def _format_serial_port(port: ListPortInfo) -> str:
+    def _format_serial_port(port: ListPortInfo, *, disconnected: bool = False) -> str:
         if port.description and port.description != "n/a":
-            return f"{port.description} ({port.device})"
-        return port.device
+            formatted_port = f"{port.description} ({port.device})"
+        else:
+            formatted_port = port.device
+        if disconnected:
+            return f"[Disconnected] {formatted_port}"
+        return formatted_port
