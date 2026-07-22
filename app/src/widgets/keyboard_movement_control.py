@@ -1,19 +1,15 @@
 """Keyboard controls for broadcasting relative G-code movements."""
 
-from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Slot
+from PySide6.QtCore import QEvent, QObject, Qt, Slot
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
-    QAbstractSpinBox,
     QApplication,
     QComboBox,
     QDoubleSpinBox,
     QGridLayout,
     QGroupBox,
     QLabel,
-    QLineEdit,
-    QPlainTextEdit,
     QSizePolicy,
-    QTextEdit,
     QWidget,
 )
 
@@ -32,13 +28,6 @@ class KeyboardMovementControl(QGroupBox):
     MINIMUM_SPEED_MM_S = 0.1
     MAXIMUM_SPEED_MM_S = 1_000.0
     DEFAULT_SPEED_MM_S = 50.0
-    _EDITING_WIDGET_TYPES = (
-        QAbstractSpinBox,
-        QComboBox,
-        QLineEdit,
-        QPlainTextEdit,
-        QTextEdit,
-    )
     _KEY_DIRECTIONS = {
         Qt.Key.Key_Q: (-1.0, 0.0, 0.0),
         Qt.Key.Key_W: (1.0, 0.0, 0.0),
@@ -56,7 +45,6 @@ class KeyboardMovementControl(QGroupBox):
     ) -> None:
         super().__init__("Keyboard Movement", parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._gcode_controller = gcode_controller
         self._serial_port_monitor = serial_port_monitor
         # Keyboard movement form
@@ -135,12 +123,7 @@ class KeyboardMovementControl(QGroupBox):
             return False
         if not self._serial_port_monitor.connected_devices:
             return False
-        if QApplication.activeWindow() is not self.window():
-            return False
-        focus_widget = QApplication.focusWidget()
-        if not isinstance(focus_widget, self._EDITING_WIDGET_TYPES):
-            return True
-        return self.isAncestorOf(focus_widget)
+        return True
 
     def _move(self, x_direction: float, y_direction: float, z_direction: float) -> None:
         self._gcode_controller.move(
@@ -155,8 +138,6 @@ class KeyboardMovementControl(QGroupBox):
     @Slot(int)
     def _handle_activation_changed(self, _index: int) -> None:
         is_active = bool(self._activation_selector.currentData())
-        if is_active:
-            QTimer.singleShot(0, self.setFocus)
         self._set_movement_controls_enabled(
             is_active and bool(self._serial_port_monitor.connected_devices)
         )
