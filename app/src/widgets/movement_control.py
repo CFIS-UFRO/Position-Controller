@@ -43,7 +43,7 @@ class MovementControl(QGroupBox):
         layout.setHorizontalSpacing(6)
         layout.setVerticalSpacing(8)
         layout.setColumnStretch(2, 1)
-        self._home_all_axes_button = QPushButton("Home All Axes", self)
+        self._home_all_axes_button = QPushButton("Home", self)
         self._home_all_axes_button.clicked.connect(self._home_all_axes)
         layout.addWidget(self._home_all_axes_button, 0, 0, 1, 3)
         self._set_origin_button = QPushButton("Set Current Position as Origin", self)
