@@ -20,6 +20,7 @@ from src.utils.gcode_controller import GCodeController
 from src.utils.paths import get_pyproject_file_path
 from src.utils.releases import get_pyproject_version
 from src.utils.serial_port_monitor import SerialPortMonitor
+from src.widgets.custom_message_control import CustomMessageControl
 from src.widgets.device_serial_port_selector import DeviceSerialPortSelector
 from src.widgets.movement_control import MovementControl
 from src.widgets.serial_communication_control import SerialCommunicationControl
@@ -53,7 +54,7 @@ class MainWindow(QMainWindow):
         # Window metadata and initial layout
         self._version = get_pyproject_version(get_pyproject_file_path())
         self.setWindowTitle(APP_NAME)
-        self.resize(960, 640)
+        self.resize(1_200, 640)
         self._build_content()
         # Application controls and background monitoring
         self._connect_application_signals()
@@ -129,6 +130,15 @@ class MainWindow(QMainWindow):
             1,
             alignment=Qt.AlignmentFlag.AlignTop,
         )
+        self._custom_message_control = CustomMessageControl(
+            self._serial_port_monitor,
+            main_container_widget,
+        )
+        controls_layout.addWidget(
+            self._custom_message_control,
+            1,
+            alignment=Qt.AlignmentFlag.AlignTop,
+        )
         main_container_layout.addLayout(controls_layout, 1)
         self._terminal_widget = TerminalWidget(main_container_widget)
         main_container_layout.addWidget(self._terminal_widget)
@@ -158,11 +168,17 @@ class MainWindow(QMainWindow):
             self._movement_control.handle_serial_connection_changed
         )
         self._serial_port_monitor.serial_connection_changed.connect(
+            self._custom_message_control.handle_serial_connection_changed
+        )
+        self._serial_port_monitor.serial_connection_changed.connect(
             self._handle_serial_connection_changed
         )
         # Terminal events
         self._gcode_controller.command_sent.connect(
-            self._handle_gcode_command_sent
+            self._handle_serial_message_sent
+        )
+        self._custom_message_control.message_sent.connect(
+            self._handle_serial_message_sent
         )
         self._serial_port_monitor.serial_data_received.connect(
             self._handle_serial_data_received
@@ -185,8 +201,8 @@ class MainWindow(QMainWindow):
         self._terminal_widget.append_message("INFO", device, message)
 
     @Slot(str, str)
-    def _handle_gcode_command_sent(self, device: str, description: str) -> None:
-        self._terminal_widget.append_message("TX", device, description)
+    def _handle_serial_message_sent(self, device: str, message: str) -> None:
+        self._terminal_widget.append_message("TX", device, message)
 
     @Slot(str, str)
     def _handle_serial_data_received(self, device: str, message: str) -> None:
