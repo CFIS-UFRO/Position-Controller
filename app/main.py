@@ -45,8 +45,7 @@ def main() -> int:
         quit_callback=lambda: quit_app(app),
     )
     app.aboutToQuit.connect(lambda: about_to_quit(window))
-    window.show()
-    window.center_on_screen()
+    window.showMaximized()
     QTimer.singleShot(0, window.check_for_updates_on_startup)
     return app.exec()
 
