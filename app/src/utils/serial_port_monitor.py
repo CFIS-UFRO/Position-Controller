@@ -3,13 +3,45 @@
 import json
 import os
 
-from PySide6.QtCore import QObject, Signal, QTimer
-from serial import Serial, SerialException
+from PySide6.QtCore import QObject, QThread, Qt, Signal, Slot, QTimer
+from serial import Serial, SerialException, SerialTimeoutException
 from serial.tools import list_ports
 from serial.tools.list_ports_common import ListPortInfo
 
 from src.utils.logging import logger
 from src.utils.paths import get_fake_serial_ports_dir_path
+
+# --------------------------------------------------------------------------------------------------
+# Serial reader
+# --------------------------------------------------------------------------------------------------
+class _SerialReaderThread(QThread):
+    """Read line-oriented serial data without blocking the application thread."""
+
+    data_received = Signal(str, str)
+    failed = Signal(str, str)
+
+    def __init__(
+        self,
+        device: str,
+        connection: Serial,
+        parent: QObject | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self._device = device
+        self._connection = connection
+
+    def run(self) -> None:
+        while not self.isInterruptionRequested():
+            try:
+                received_data = self._connection.read_until(b"\n")
+            except (OSError, SerialException, TypeError) as error:
+                if not self.isInterruptionRequested():
+                    self.failed.emit(self._device, str(error))
+                return
+            if not received_data:
+                continue
+            message = received_data.decode("utf-8", errors="replace").rstrip("\r\n")
+            self.data_received.emit(self._device, message)
 
 # --------------------------------------------------------------------------------------------------
 # Port monitoring
@@ -18,14 +50,21 @@ class SerialPortMonitor(QObject):
     """Track available serial ports and own their open connections."""
 
     serial_ports_changed = Signal(object)
-    serial_connection_closed_by_disconnection = Signal(str)
+    serial_connection_changed = Signal(str, bool, int)
+    serial_data_sent = Signal(str, str)
+    serial_data_received = Signal(str, str)
+    serial_io_error = Signal(str, str)
 
     SCAN_INTERVAL_MS = 5_000
+    READ_TIMEOUT_SECONDS = 0.1
+    WRITE_TIMEOUT_SECONDS = 1.0
+    READER_STOP_TIMEOUT_MS = 1_000
 
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._serial_ports: list[ListPortInfo] = []
         self._serial_connections: dict[str, Serial] = {}
+        self._serial_readers: dict[str, _SerialReaderThread] = {}
         self._connection_errors: dict[str, str] = {}
         self._timer = QTimer(self)
         self._timer.setInterval(self.SCAN_INTERVAL_MS)
@@ -35,6 +74,15 @@ class SerialPortMonitor(QObject):
     def serial_ports(self) -> list[ListPortInfo]:
         """Return a copy of the latest available serial-port list."""
         return self._serial_ports.copy()
+
+    @property
+    def connected_devices(self) -> list[str]:
+        """Return the device names of all currently open serial connections."""
+        return [
+            device
+            for device, connection in self._serial_connections.items()
+            if connection.is_open
+        ]
 
     @property
     def is_running(self) -> bool:
@@ -54,23 +102,44 @@ class SerialPortMonitor(QObject):
         """Return the most recent connection error for a serial device."""
         return self._connection_errors.get(device)
 
-    def open_connection(self, device: str) -> bool:
+    def open_connection(self, device: str, baud_rate: int) -> bool:
         """Open and store a serial connection, returning whether it is open."""
+        if (
+            not isinstance(baud_rate, int)
+            or isinstance(baud_rate, bool)
+            or baud_rate <= 0
+        ):
+            raise ValueError("Baud rate must be a positive integer.")
         if not self.is_device_available(device):
             self._connection_errors.pop(device, None)
             return False
-        if self.is_device_connected(device):
+        connection = self._serial_connections.get(device)
+        if (
+            connection is not None
+            and connection.is_open
+            and connection.baudrate == baud_rate
+        ):
             self._connection_errors.pop(device, None)
             return True
         self.close_connection(device)
         try:
-            self._serial_connections[device] = Serial(port=device)
+            connection = Serial(
+                port=device,
+                baudrate=baud_rate,
+                timeout=self.READ_TIMEOUT_SECONDS,
+                write_timeout=self.WRITE_TIMEOUT_SECONDS,
+            )
         except (OSError, SerialException) as error:
-            self._connection_errors[device] = str(error)
-            logger.error(f"Could not open serial port {device}: {error}")
+            error_message = f"Could not open serial port at {baud_rate:,} baud: {error}"
+            self._connection_errors[device] = error_message
+            logger.error(f"{error_message} ({device})")
+            self.serial_io_error.emit(device, error_message)
             return False
+        self._serial_connections[device] = connection
+        self._start_reader(device, connection)
         self._connection_errors.pop(device, None)
-        logger.info(f"Serial port opened: {device}")
+        logger.info(f"Serial port opened at {baud_rate} baud: {device}")
+        self.serial_connection_changed.emit(device, True, baud_rate)
         return True
 
     def close_connection(self, device: str) -> bool:
@@ -78,12 +147,25 @@ class SerialPortMonitor(QObject):
         connection = self._serial_connections.pop(device, None)
         if connection is None:
             return False
+        baud_rate = int(connection.baudrate)
+        reader = self._serial_readers.pop(device, None)
+        if reader is not None:
+            reader.requestInterruption()
+            try:
+                connection.cancel_read()
+            except (AttributeError, OSError, SerialException):
+                pass
         try:
             connection.close()
         except (OSError, SerialException) as error:
             logger.warning(f"Could not close serial port {device}: {error}")
         else:
             logger.info(f"Serial port closed: {device}")
+        if reader is not None:
+            if not reader.wait(self.READER_STOP_TIMEOUT_MS):
+                logger.warning(f"Serial reader did not stop promptly: {device}")
+            reader.deleteLater()
+        self.serial_connection_changed.emit(device, False, baud_rate)
         return True
 
     def close_all_connections(self) -> bool:
@@ -94,17 +176,54 @@ class SerialPortMonitor(QObject):
         self._connection_errors.clear()
         return had_connections
 
-    def synchronize_connections(self, devices: list[str]) -> None:
+    def broadcast_write(
+        self,
+        data: bytes,
+        *,
+        devices: list[str] | None = None,
+    ) -> list[str]:
+        """Write bytes to requested open connections and return successful devices."""
+        if not isinstance(data, bytes) or not data:
+            raise ValueError("Serial data must be a non-empty bytes object.")
+        target_devices = (
+            self.connected_devices
+            if devices is None
+            else list(dict.fromkeys(devices))
+        )
+        successful_devices: list[str] = []
+        message = data.decode("utf-8", errors="replace").rstrip("\r\n")
+        for device in target_devices:
+            connection = self._serial_connections.get(device)
+            if connection is None or not connection.is_open:
+                continue
+            try:
+                written_byte_count = connection.write(data)
+                if written_byte_count != len(data):
+                    raise SerialTimeoutException(
+                        f"Wrote {written_byte_count} of {len(data)} bytes."
+                    )
+            except (OSError, SerialException) as error:
+                error_message = f"Could not write serial data: {error}"
+                self._connection_errors[device] = error_message
+                logger.error(f"{error_message} ({device})")
+                self.serial_io_error.emit(device, error_message)
+                self.close_connection(device)
+                continue
+            successful_devices.append(device)
+            self.serial_data_sent.emit(device, message)
+        return successful_devices
+
+    def synchronize_connections(self, device_baud_rates: dict[str, int]) -> None:
         """Keep open connections aligned with the requested serial devices."""
-        requested_devices = set(devices)
+        requested_devices = set(device_baud_rates)
         for device in list(self._serial_connections):
             if device not in requested_devices or not self.is_device_available(device):
                 self.close_connection(device)
-        for device in devices:
+        for device, baud_rate in device_baud_rates.items():
             if not self.is_device_available(device):
                 self._connection_errors.pop(device, None)
                 continue
-            self.open_connection(device)
+            self.open_connection(device, baud_rate)
 
     def start(self) -> bool:
         """Start monitoring and return whether monitoring was started."""
@@ -121,6 +240,34 @@ class SerialPortMonitor(QObject):
         self._timer.stop()
         return True
 
+    def _start_reader(self, device: str, connection: Serial) -> None:
+        reader = _SerialReaderThread(device, connection, self)
+        reader.data_received.connect(
+            self._handle_data_received,
+            Qt.ConnectionType.QueuedConnection,
+        )
+        reader.failed.connect(
+            self._handle_reader_failure,
+            Qt.ConnectionType.QueuedConnection,
+        )
+        self._serial_readers[device] = reader
+        reader.start()
+
+    @Slot(str, str)
+    def _handle_data_received(self, device: str, message: str) -> None:
+        if device in self._serial_connections:
+            self.serial_data_received.emit(device, message)
+
+    @Slot(str, str)
+    def _handle_reader_failure(self, device: str, error_message: str) -> None:
+        if device not in self._serial_connections:
+            return
+        formatted_error = f"Could not read serial data: {error_message}"
+        self._connection_errors[device] = formatted_error
+        logger.error(f"{formatted_error} ({device})")
+        self.serial_io_error.emit(device, formatted_error)
+        self.close_connection(device)
+
     def _refresh(self) -> None:
         serial_ports = self.get_available_serial_ports()
         previous_ports = {port.device: port for port in self._serial_ports}
@@ -135,11 +282,8 @@ class SerialPortMonitor(QObject):
             logger.info(f"Serial port disconnected: {formatted_port}")
         self._serial_ports = serial_ports
         for device in disconnected_devices:
-            was_connected = self.is_device_connected(device)
             self.close_connection(device)
             self._connection_errors.pop(device, None)
-            if was_connected:
-                self.serial_connection_closed_by_disconnection.emit(device)
         if previous_ports.keys() != current_ports.keys():
             self.serial_ports_changed.emit(self.serial_ports)
 

@@ -24,6 +24,8 @@ class DeviceSerialPortSelector(QGroupBox):
 
     MIN_DEVICE_COUNT = 1
     MAX_DEVICE_COUNT = 8
+    BAUD_RATES = (9_600, 19_200, 38_400, 57_600, 115_200, 250_000)
+    DEFAULT_BAUD_RATE = 115_200
 
     def __init__(
         self,
@@ -38,6 +40,7 @@ class DeviceSerialPortSelector(QGroupBox):
         self._device_labels: list[QLabel] = []
         self._device_separators: list[QLabel] = []
         self._device_selectors: list[QComboBox] = []
+        self._baud_rate_selectors: list[QComboBox] = []
         self._remembered_serial_ports: list[ListPortInfo | None] = []
         self._updating_selectors = False
         self._selection_enabled = True
@@ -54,7 +57,9 @@ class DeviceSerialPortSelector(QGroupBox):
         self._device_count_selector.setRange(self.MIN_DEVICE_COUNT, self.MAX_DEVICE_COUNT)
         self._device_count_selector.setValue(self.MIN_DEVICE_COUNT)
         self._device_count_selector.valueChanged.connect(self._set_device_count)
-        self._grid_layout.addWidget(self._device_count_selector, 0, 2)
+        self._grid_layout.addWidget(self._device_count_selector, 0, 2, 1, 2)
+        self._grid_layout.addWidget(QLabel("Serial port", self), 1, 2)
+        self._grid_layout.addWidget(QLabel("Baud rate", self), 1, 3)
         # Live serial-port synchronization
         self._serial_port_monitor.serial_ports_changed.connect(
             self._handle_serial_ports_changed
@@ -69,11 +74,31 @@ class DeviceSerialPortSelector(QGroupBox):
             selected_devices.append(device if isinstance(device, str) else None)
         return selected_devices
 
+    def get_selected_device_baud_rates(self) -> dict[str, int]:
+        """Return each selected serial device and its configured baud rate."""
+        device_baud_rates: dict[str, int] = {}
+        for device_selector, baud_rate_selector in zip(
+            self._device_selectors,
+            self._baud_rate_selectors,
+            strict=True,
+        ):
+            device = device_selector.currentData()
+            baud_rate = baud_rate_selector.currentData()
+            if (
+                isinstance(device, str)
+                and isinstance(baud_rate, int)
+                and not isinstance(baud_rate, bool)
+            ):
+                device_baud_rates[device] = baud_rate
+        return device_baud_rates
+
     def set_selection_enabled(self, enabled: bool) -> None:
-        """Enable or disable the device count and serial-port selectors."""
+        """Enable or disable the device count, serial-port, and baud selectors."""
         self._selection_enabled = enabled
         self._device_count_selector.setEnabled(enabled)
         for selector in self._device_selectors:
+            selector.setEnabled(enabled)
+        for selector in self._baud_rate_selectors:
             selector.setEnabled(enabled)
 
     def _set_device_count(self, device_count: int) -> None:
@@ -93,12 +118,22 @@ class DeviceSerialPortSelector(QGroupBox):
         selector.addItem("None")
         selector.setEnabled(self._selection_enabled)
         selector.currentIndexChanged.connect(self._handle_device_selection_changed)
-        self._grid_layout.addWidget(label, row_number, 0)
-        self._grid_layout.addWidget(separator, row_number, 1)
-        self._grid_layout.addWidget(selector, row_number, 2)
+        baud_rate_selector = QComboBox(self)
+        for baud_rate in self.BAUD_RATES:
+            baud_rate_selector.addItem(f"{baud_rate:,}", baud_rate)
+        baud_rate_selector.setCurrentIndex(
+            baud_rate_selector.findData(self.DEFAULT_BAUD_RATE)
+        )
+        baud_rate_selector.setEnabled(self._selection_enabled)
+        grid_row = row_number + 1
+        self._grid_layout.addWidget(label, grid_row, 0)
+        self._grid_layout.addWidget(separator, grid_row, 1)
+        self._grid_layout.addWidget(selector, grid_row, 2)
+        self._grid_layout.addWidget(baud_rate_selector, grid_row, 3)
         self._device_labels.append(label)
         self._device_separators.append(separator)
         self._device_selectors.append(selector)
+        self._baud_rate_selectors.append(baud_rate_selector)
         self._remembered_serial_ports.append(None)
 
     def _remove_device_row(self) -> None:
@@ -106,13 +141,16 @@ class DeviceSerialPortSelector(QGroupBox):
         label = self._device_labels.pop()
         separator = self._device_separators.pop()
         selector = self._device_selectors.pop()
+        baud_rate_selector = self._baud_rate_selectors.pop()
         self._remembered_serial_ports.pop()
         self._grid_layout.removeWidget(label)
         self._grid_layout.removeWidget(separator)
         self._grid_layout.removeWidget(selector)
+        self._grid_layout.removeWidget(baud_rate_selector)
         label.deleteLater()
         separator.deleteLater()
         selector.deleteLater()
+        baud_rate_selector.deleteLater()
 
     def _handle_serial_ports_changed(self, serial_ports: object) -> None:
         # Accept only the monitor's expected list payload and known port objects.

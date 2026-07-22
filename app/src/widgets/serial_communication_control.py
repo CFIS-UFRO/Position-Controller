@@ -58,6 +58,9 @@ class SerialCommunicationControl(QGroupBox):
         self._serial_port_monitor.serial_ports_changed.connect(
             self._handle_serial_ports_changed
         )
+        self._serial_port_monitor.serial_connection_changed.connect(
+            self._handle_serial_connection_changed
+        )
         self._refresh_status_display()
 
     @property
@@ -104,8 +107,18 @@ class SerialCommunicationControl(QGroupBox):
             return
         self._refresh_status_display(selected_devices)
 
+    def _handle_serial_connection_changed(
+        self,
+        _device: str,
+        _connected: bool,
+        _baud_rate: int,
+    ) -> None:
+        self._refresh_status_display()
+
     def _synchronize_connections(self, selected_devices: list[str]) -> None:
-        self._serial_port_monitor.synchronize_connections(selected_devices)
+        self._serial_port_monitor.synchronize_connections(
+            self._device_selector.get_selected_device_baud_rates()
+        )
         self._refresh_status_display(selected_devices)
 
     def _refresh_status_display(
@@ -127,7 +140,9 @@ class SerialCommunicationControl(QGroupBox):
             self._status_layout.addWidget(
                 empty_label,
                 2,
-                0
+                0,
+                1,
+                3,
             )
             self._communication_button.setEnabled(False)
             return
@@ -172,6 +187,7 @@ class SerialCommunicationControl(QGroupBox):
                 continue
             widget = layout_item.widget()
             if widget is not None:
+                widget.setParent(None)
                 widget.deleteLater()
 
     def _get_device_status(self, device: str) -> tuple[str, str, str]:
