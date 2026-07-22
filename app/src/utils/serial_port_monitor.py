@@ -31,6 +31,7 @@ class _SerialReaderThread(QThread):
         self._connection = connection
 
     def run(self) -> None:
+        pending_data = bytearray()
         while not self.isInterruptionRequested():
             try:
                 received_data = self._connection.read_until(b"\n")
@@ -40,8 +41,12 @@ class _SerialReaderThread(QThread):
                 return
             if not received_data:
                 continue
-            message = received_data.decode("utf-8", errors="replace").rstrip("\r\n")
-            self.data_received.emit(self._device, message)
+            pending_data.extend(received_data)
+            while (newline_index := pending_data.find(b"\n")) >= 0:
+                line = bytes(pending_data[:newline_index]).rstrip(b"\r")
+                del pending_data[: newline_index + 1]
+                message = line.decode("utf-8", errors="replace")
+                self.data_received.emit(self._device, message)
 
 # --------------------------------------------------------------------------------------------------
 # Port monitoring
