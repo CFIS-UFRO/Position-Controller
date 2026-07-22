@@ -28,13 +28,13 @@ class KeyboardMovementControl(QGroupBox):
     MINIMUM_SPEED_MM_S = 0.1
     MAXIMUM_SPEED_MM_S = 1_000.0
     DEFAULT_SPEED_MM_S = 50.0
-    _KEY_DIRECTIONS = {
-        Qt.Key.Key_Q: (-1.0, 0.0, 0.0),
-        Qt.Key.Key_W: (1.0, 0.0, 0.0),
-        Qt.Key.Key_A: (0.0, -1.0, 0.0),
-        Qt.Key.Key_S: (0.0, 1.0, 0.0),
-        Qt.Key.Key_Z: (0.0, 0.0, -1.0),
-        Qt.Key.Key_X: (0.0, 0.0, 1.0),
+    _KEY_DIRECTIONS: dict[int, tuple[float, float, float]] = {
+        int(Qt.Key.Key_Q): (-1.0, 0.0, 0.0),
+        int(Qt.Key.Key_W): (1.0, 0.0, 0.0),
+        int(Qt.Key.Key_A): (0.0, -1.0, 0.0),
+        int(Qt.Key.Key_S): (0.0, 1.0, 0.0),
+        int(Qt.Key.Key_Z): (0.0, 0.0, -1.0),
+        int(Qt.Key.Key_X): (0.0, 0.0, 1.0),
     }
 
     def __init__(
