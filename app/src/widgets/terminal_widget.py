@@ -10,6 +10,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.utils.logging import logger
+
 # --------------------------------------------------------------------------------------------------
 # Widget
 # --------------------------------------------------------------------------------------------------
@@ -30,6 +32,18 @@ class TerminalWidget(QGroupBox):
         "ERROR": "#FF5252",
         "CRITICAL": "#FF4081",
         "FATAL": "#FF4081",
+    }
+    EVENT_LOG_LEVELS = {
+        "DEBUG": logger.debug,
+        "INFO": logger.info,
+        "TX": logger.info,
+        "RX": logger.info,
+        "SUCCESS": logger.info,
+        "WARNING": logger.warning,
+        "WARN": logger.warning,
+        "ERROR": logger.error,
+        "CRITICAL": logger.critical,
+        "FATAL": logger.critical,
     }
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -71,7 +85,12 @@ class TerminalWidget(QGroupBox):
         )
         cursor = self._output.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
+        log_message = self.EVENT_LOG_LEVELS.get(
+            normalized_event_type,
+            logger.info,
+        )
         for message_line in message_lines:
+            log_message(f"[{event_type}] [{device}] {message_line}")
             if not self._output.document().isEmpty():
                 cursor.insertBlock()
             cursor.insertText(
