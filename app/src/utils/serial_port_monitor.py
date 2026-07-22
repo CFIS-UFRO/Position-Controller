@@ -17,6 +17,8 @@ from src.utils.paths import get_fake_serial_ports_dir_path
 class _SerialReaderThread(QThread):
     """Read line-oriented serial data without blocking the application thread."""
 
+    READ_CHUNK_SIZE = 4_096
+
     data_received = Signal(str, str)
     failed = Signal(str, str)
 
@@ -34,7 +36,11 @@ class _SerialReaderThread(QThread):
         pending_data = bytearray()
         while not self.isInterruptionRequested():
             try:
-                received_data = self._connection.read_until(b"\n")
+                bytes_to_read = min(
+                    max(self._connection.in_waiting, 1),
+                    self.READ_CHUNK_SIZE,
+                )
+                received_data = self._connection.read(bytes_to_read)
             except (OSError, SerialException, TypeError) as error:
                 if not self.isInterruptionRequested():
                     self.failed.emit(self._device, str(error))
@@ -42,9 +48,10 @@ class _SerialReaderThread(QThread):
             if not received_data:
                 continue
             pending_data.extend(received_data)
-            while (newline_index := pending_data.find(b"\n")) >= 0:
-                line = bytes(pending_data[:newline_index]).rstrip(b"\r")
-                del pending_data[: newline_index + 1]
+            lines = pending_data.split(b"\n")
+            pending_data = lines.pop()
+            for line in lines:
+                line = line.rstrip(b"\r")
                 message = line.decode("utf-8", errors="replace")
                 self.data_received.emit(self._device, message)
 
