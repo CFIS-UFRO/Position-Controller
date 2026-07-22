@@ -22,6 +22,7 @@ from src.utils.releases import get_pyproject_version
 from src.utils.serial_port_monitor import SerialPortMonitor
 from src.widgets.custom_message_control import CustomMessageControl
 from src.widgets.device_serial_port_selector import DeviceSerialPortSelector
+from src.widgets.keyboard_movement_control import KeyboardMovementControl
 from src.widgets.movement_control import MovementControl
 from src.widgets.serial_communication_control import SerialCommunicationControl
 from src.widgets.terminal_widget import TerminalWidget
@@ -130,15 +131,23 @@ class MainWindow(QMainWindow):
             1,
             alignment=Qt.AlignmentFlag.AlignTop,
         )
+        right_controls_widget = QWidget(main_container_widget)
+        right_controls_layout = QVBoxLayout(right_controls_widget)
+        right_controls_layout.setContentsMargins(0, 0, 0, 0)
+        right_controls_layout.setSpacing(16)
+        self._keyboard_movement_control = KeyboardMovementControl(
+            self._gcode_controller,
+            self._serial_port_monitor,
+            right_controls_widget,
+        )
+        right_controls_layout.addWidget(self._keyboard_movement_control)
         self._custom_message_control = CustomMessageControl(
             self._serial_port_monitor,
-            main_container_widget,
+            right_controls_widget,
         )
-        controls_layout.addWidget(
-            self._custom_message_control,
-            1,
-            alignment=Qt.AlignmentFlag.AlignTop,
-        )
+        right_controls_layout.addWidget(self._custom_message_control)
+        right_controls_layout.addStretch(1)
+        controls_layout.addWidget(right_controls_widget, 1)
         main_container_layout.addLayout(controls_layout, 1)
         self._terminal_widget = TerminalWidget(main_container_widget)
         main_container_layout.addWidget(self._terminal_widget)
@@ -166,6 +175,9 @@ class MainWindow(QMainWindow):
         )
         self._serial_port_monitor.serial_connection_changed.connect(
             self._movement_control.handle_serial_connection_changed
+        )
+        self._serial_port_monitor.serial_connection_changed.connect(
+            self._keyboard_movement_control.handle_serial_connection_changed
         )
         self._serial_port_monitor.serial_connection_changed.connect(
             self._custom_message_control.handle_serial_connection_changed

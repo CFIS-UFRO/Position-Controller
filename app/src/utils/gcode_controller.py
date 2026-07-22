@@ -64,8 +64,14 @@ class GCodeController(QObject):
         y_mm: float,
         z_mm: float,
         speed_mm_s: float,
+        *,
+        force_mode: bool = False,
     ) -> None:
-        """Send a millimetre-based linear movement to every open serial port."""
+        """Send a millimetre-based linear movement to every open serial port.
+
+        Reapply the positioning mode when ``force_mode`` is true, even when the
+        optimistic device state already contains the requested mode.
+        """
         if not isinstance(mode, MovementMode):
             raise TypeError("Movement mode must be a MovementMode value.")
         coordinates = (x_mm, y_mm, z_mm)
@@ -103,7 +109,7 @@ class GCodeController(QObject):
             if (
                 state is not None
                 and state.uses_millimeters
-                and state.movement_mode is not mode
+                and (force_mode or state.movement_mode is not mode)
                 and self._serial_port_monitor.is_device_connected(device)
             ):
                 mode_devices.append(device)
