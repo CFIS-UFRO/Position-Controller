@@ -59,6 +59,11 @@ class MainWindow(QMainWindow):
         self._connect_application_signals()
         self._configure_shortcuts()
         self._serial_port_monitor.start()
+        self._terminal_widget.append_message(
+            "INFO",
+            "Application",
+            f"Welcome to {APP_NAME}",
+        )
 
     def _build_content(self) -> None:
         # Central container and layout
