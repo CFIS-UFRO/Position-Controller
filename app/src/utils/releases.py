@@ -73,7 +73,7 @@ class ReleaseUpdate:
 class _ReleaseUpdateWorker(QObject):
     """Resolve the latest release without blocking the Qt event loop."""
 
-    succeeded = Signal(object)
+    succeeded = Signal(ReleaseUpdate)
     failed = Signal(str)
     finished = Signal()
 
@@ -92,7 +92,7 @@ class _ReleaseUpdateWorker(QObject):
 class ReleaseUpdateChecker(QObject):
     """Manage asynchronous release checks and their worker-thread lifecycle."""
 
-    succeeded = Signal(object)
+    succeeded = Signal(ReleaseUpdate)
     failed = Signal(str)
 
     def __init__(self, parent: QObject | None = None) -> None:
@@ -130,8 +130,8 @@ class ReleaseUpdateChecker(QObject):
         thread.start()
         return True
 
-    @Slot(object)
-    def _handle_success(self, release_update: object) -> None:
+    @Slot(ReleaseUpdate)
+    def _handle_success(self, release_update: ReleaseUpdate) -> None:
         self.succeeded.emit(release_update)
 
     @Slot(str)

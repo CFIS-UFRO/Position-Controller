@@ -1,6 +1,6 @@
 """Positioning controls for broadcasting G-code movements."""
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -89,10 +89,6 @@ class MovementControl(QGroupBox):
             alignment=Qt.AlignmentFlag.AlignCenter,
         )
         layout.setRowStretch(8, 1)
-        # Keep command availability aligned with actual open connections.
-        self._serial_port_monitor.serial_connection_changed.connect(
-            self._handle_serial_connection_changed
-        )
         self._set_command_buttons_enabled(bool(self._serial_port_monitor.connected_devices))
 
     def _create_coordinate_selector(self) -> QDoubleSpinBox:
@@ -122,12 +118,14 @@ class MovementControl(QGroupBox):
             self._speed_selector.value(),
         )
 
-    def _handle_serial_connection_changed(
+    @Slot(str, bool, int)
+    def handle_serial_connection_changed(
         self,
         _device: str,
         _connected: bool,
         _baud_rate: int,
     ) -> None:
+        """Update command availability after a serial connection changes."""
         self._set_command_buttons_enabled(bool(self._serial_port_monitor.connected_devices))
 
     def _set_command_buttons_enabled(self, enabled: bool) -> None:

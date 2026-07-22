@@ -1,6 +1,6 @@
 """Serial communication controls and connection-status display."""
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -51,16 +51,6 @@ class SerialCommunicationControl(QGroupBox):
             self._communication_button,
             alignment=Qt.AlignmentFlag.AlignCenter,
         )
-        # Keep status rows synchronized with selection and port availability changes.
-        self._device_selector.selected_devices_changed.connect(
-            self._handle_selected_devices_changed
-        )
-        self._serial_port_monitor.serial_ports_changed.connect(
-            self._handle_serial_ports_changed
-        )
-        self._serial_port_monitor.serial_connection_changed.connect(
-            self._handle_serial_connection_changed
-        )
         self._refresh_status_display()
 
     @property
@@ -93,26 +83,23 @@ class SerialCommunicationControl(QGroupBox):
         self._synchronize_connections(selected_devices)
         logger.info("Serial communication started")
 
-    def _handle_selected_devices_changed(self, _selected_devices: object) -> None:
+    @Slot()
+    def handle_device_configuration_changed(self) -> None:
+        """Synchronize or refresh communication after device configuration changes."""
         selected_devices = self._get_selected_devices()
         if self._communication_active:
             self._synchronize_connections(selected_devices)
             return
         self._refresh_status_display(selected_devices)
 
-    def _handle_serial_ports_changed(self, _serial_ports: object) -> None:
-        selected_devices = self._get_selected_devices()
-        if self._communication_active:
-            self._synchronize_connections(selected_devices)
-            return
-        self._refresh_status_display(selected_devices)
-
-    def _handle_serial_connection_changed(
+    @Slot(str, bool, int)
+    def handle_serial_connection_changed(
         self,
         _device: str,
         _connected: bool,
         _baud_rate: int,
     ) -> None:
+        """Refresh connection status after a serial connection changes."""
         self._refresh_status_display()
 
     def _synchronize_connections(self, selected_devices: list[str]) -> None:

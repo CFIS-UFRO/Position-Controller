@@ -54,9 +54,8 @@ class _SerialReaderThread(QThread):
 class SerialPortMonitor(QObject):
     """Track available serial ports and own their open connections."""
 
-    serial_ports_changed = Signal(object)
+    serial_ports_changed = Signal(list)
     serial_connection_changed = Signal(str, bool, int)
-    serial_data_sent = Signal(str, str)
     serial_data_received = Signal(str, str)
     serial_io_error = Signal(str, str)
 
@@ -196,7 +195,6 @@ class SerialPortMonitor(QObject):
             else list(dict.fromkeys(devices))
         )
         successful_devices: list[str] = []
-        message = data.decode("utf-8", errors="replace").rstrip("\r\n")
         for device in target_devices:
             connection = self._serial_connections.get(device)
             if connection is None or not connection.is_open:
@@ -215,7 +213,6 @@ class SerialPortMonitor(QObject):
                 self.close_connection(device)
                 continue
             successful_devices.append(device)
-            self.serial_data_sent.emit(device, message)
         return successful_devices
 
     def synchronize_connections(self, device_baud_rates: dict[str, int]) -> None:

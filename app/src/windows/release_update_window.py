@@ -119,11 +119,8 @@ class ReleaseUpdateWindow(QDialog):
             self._allow_result_window = False
         super().done(result)
 
-    @Slot(object)
-    def _handle_check_success(self, release_update: object) -> None:
-        if not isinstance(release_update, ReleaseUpdate):
-            self._handle_check_failure("Update check returned an invalid result.")
-            return
+    @Slot(ReleaseUpdate)
+    def _handle_check_success(self, release_update: ReleaseUpdate) -> None:
         self._release_update = release_update
         if not release_update.is_update_available and self._silent_check:
             return

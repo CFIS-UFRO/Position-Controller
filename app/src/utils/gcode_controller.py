@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 from enum import Enum
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, Slot
 
 from src.utils.serial_port_monitor import SerialPortMonitor
 
@@ -42,9 +42,6 @@ class GCodeController(QObject):
             device: _DeviceGCodeState()
             for device in self._serial_port_monitor.connected_devices
         }
-        self._serial_port_monitor.serial_connection_changed.connect(
-            self._handle_serial_connection_changed
-        )
 
     def set_current_position_as_origin(self) -> None:
         """Set the current X, Y, and Z coordinates to zero on every open port."""
@@ -152,12 +149,14 @@ class GCodeController(QObject):
             f"{mode.name} MOVE {movement_parameters}",
         )
 
-    def _handle_serial_connection_changed(
+    @Slot(str, bool, int)
+    def handle_serial_connection_changed(
         self,
         device: str,
         connected: bool,
         _baud_rate: int,
     ) -> None:
+        """Reset or remove the optimistic G-code state for a serial device."""
         if connected:
             self._device_states[device] = _DeviceGCodeState()
         else:

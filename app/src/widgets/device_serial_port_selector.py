@@ -1,6 +1,6 @@
 """Device serial-port selection widget."""
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import (
     QComboBox,
     QGridLayout,
@@ -20,7 +20,7 @@ from src.utils.serial_port_monitor import SerialPortMonitor
 class DeviceSerialPortSelector(QGroupBox):
     """Select a unique serial port for each configured device."""
 
-    selected_devices_changed = Signal(object)
+    configuration_changed = Signal()
 
     MIN_DEVICE_COUNT = 1
     MAX_DEVICE_COUNT = 8
@@ -35,7 +35,6 @@ class DeviceSerialPortSelector(QGroupBox):
         super().__init__("Devices Selection", parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         # Serial-port and per-row selection state
-        self._serial_port_monitor = serial_port_monitor
         self._available_serial_ports = serial_port_monitor.serial_ports
         self._device_labels: list[QLabel] = []
         self._device_separators: list[QLabel] = []
@@ -44,7 +43,11 @@ class DeviceSerialPortSelector(QGroupBox):
         self._remembered_serial_ports: list[ListPortInfo | None] = []
         self._updating_selectors = False
         self._selection_enabled = True
-        self._last_emitted_selected_devices: list[str | None] = []
+        self._last_emitted_configuration: tuple[
+            tuple[str | None, ...],
+            tuple[int | None, ...],
+            tuple[str, ...],
+        ] | None = None
         # Label-and-control grid
         self._grid_layout = QGridLayout(self)
         self._grid_layout.setContentsMargins(8, 8, 8, 8)
@@ -60,10 +63,6 @@ class DeviceSerialPortSelector(QGroupBox):
         self._grid_layout.addWidget(self._device_count_selector, 0, 2, 1, 2)
         self._grid_layout.addWidget(QLabel("Serial port", self), 1, 2)
         self._grid_layout.addWidget(QLabel("Baud rate", self), 1, 3)
-        # Live serial-port synchronization
-        self._serial_port_monitor.serial_ports_changed.connect(
-            self._handle_serial_ports_changed
-        )
         self._set_device_count(self._device_count_selector.value())
 
     def get_selected_devices(self) -> list[str | None]:
@@ -125,6 +124,9 @@ class DeviceSerialPortSelector(QGroupBox):
             baud_rate_selector.findData(self.DEFAULT_BAUD_RATE)
         )
         baud_rate_selector.setEnabled(self._selection_enabled)
+        baud_rate_selector.currentIndexChanged.connect(
+            self._handle_baud_rate_selection_changed
+        )
         grid_row = row_number + 1
         self._grid_layout.addWidget(label, grid_row, 0)
         self._grid_layout.addWidget(separator, grid_row, 1)
@@ -152,10 +154,10 @@ class DeviceSerialPortSelector(QGroupBox):
         selector.deleteLater()
         baud_rate_selector.deleteLater()
 
-    def _handle_serial_ports_changed(self, serial_ports: object) -> None:
+    @Slot(list)
+    def set_available_serial_ports(self, serial_ports: list[object]) -> None:
+        """Update the available serial ports and rebuild the device selectors."""
         # Accept only the monitor's expected list payload and known port objects.
-        if not isinstance(serial_ports, list):
-            return
         self._available_serial_ports = [
             port for port in serial_ports if isinstance(port, ListPortInfo)
         ]
@@ -179,6 +181,9 @@ class DeviceSerialPortSelector(QGroupBox):
             None,
         )
         self._rebuild_device_selectors()
+
+    def _handle_baud_rate_selection_changed(self, _index: int) -> None:
+        self._emit_configuration_changed()
 
     def _rebuild_device_selectors(self) -> None:
         # Restore remembered ports only when available and not claimed by an earlier row.
@@ -231,7 +236,23 @@ class DeviceSerialPortSelector(QGroupBox):
                     selector.setCurrentIndex(0)
         finally:
             self._updating_selectors = False
-        selected_devices = self.get_selected_devices()
-        if selected_devices != self._last_emitted_selected_devices:
-            self._last_emitted_selected_devices = selected_devices
-            self.selected_devices_changed.emit(selected_devices)
+        self._emit_configuration_changed()
+
+    def _emit_configuration_changed(self) -> None:
+        baud_rates: list[int | None] = []
+        for selector in self._baud_rate_selectors:
+            baud_rate = selector.currentData()
+            baud_rates.append(
+                baud_rate
+                if isinstance(baud_rate, int) and not isinstance(baud_rate, bool)
+                else None
+            )
+        configuration = (
+            tuple(self.get_selected_devices()),
+            tuple(baud_rates),
+            tuple(port.device for port in self._available_serial_ports),
+        )
+        if configuration == self._last_emitted_configuration:
+            return
+        self._last_emitted_configuration = configuration
+        self.configuration_changed.emit()

@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QCloseEvent, QCursor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -56,6 +56,7 @@ class MainWindow(QMainWindow):
         self.resize(960, 640)
         self._build_content()
         # Application controls and background monitoring
+        self._connect_application_signals()
         self._configure_shortcuts()
         self._serial_port_monitor.start()
 
@@ -127,17 +128,34 @@ class MainWindow(QMainWindow):
         self._terminal_widget = TerminalWidget(main_container_widget)
         main_container_layout.addWidget(self._terminal_widget)
         layout.addWidget(main_container_widget, 1)
-        self._connect_serial_terminal()
         # Version footer
         version_label = QLabel(f"Version {self._version}", central_widget)
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet("font-size: 13px;")
         layout.addWidget(version_label)
 
-    def _connect_serial_terminal(self) -> None:
+    def _connect_application_signals(self) -> None:
+        # Serial-port availability and device configuration
+        self._serial_port_monitor.serial_ports_changed.connect(
+            self._device_serial_port_selector.set_available_serial_ports
+        )
+        self._device_serial_port_selector.configuration_changed.connect(
+            self._serial_communication_control.handle_device_configuration_changed
+        )
+        # Serial-connection state
+        self._serial_port_monitor.serial_connection_changed.connect(
+            self._gcode_controller.handle_serial_connection_changed
+        )
+        self._serial_port_monitor.serial_connection_changed.connect(
+            self._serial_communication_control.handle_serial_connection_changed
+        )
+        self._serial_port_monitor.serial_connection_changed.connect(
+            self._movement_control.handle_serial_connection_changed
+        )
         self._serial_port_monitor.serial_connection_changed.connect(
             self._handle_serial_connection_changed
         )
+        # Terminal events
         self._gcode_controller.command_sent.connect(
             self._handle_gcode_command_sent
         )
@@ -148,6 +166,7 @@ class MainWindow(QMainWindow):
             self._handle_serial_io_error
         )
 
+    @Slot(str, bool, int)
     def _handle_serial_connection_changed(
         self,
         device: str,
@@ -160,12 +179,15 @@ class MainWindow(QMainWindow):
             message = "Disconnected"
         self._terminal_widget.append_message("INFO", device, message)
 
+    @Slot(str, str)
     def _handle_gcode_command_sent(self, device: str, description: str) -> None:
         self._terminal_widget.append_message("TX", device, description)
 
+    @Slot(str, str)
     def _handle_serial_data_received(self, device: str, message: str) -> None:
         self._terminal_widget.append_message("RX", device, message)
 
+    @Slot(str, str)
     def _handle_serial_io_error(self, device: str, error_message: str) -> None:
         self._terminal_widget.append_message("ERROR", device, error_message)
 
