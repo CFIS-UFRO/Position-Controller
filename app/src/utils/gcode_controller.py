@@ -49,10 +49,23 @@ class GCodeController(QObject):
     def set_current_position_as_origin(self) -> None:
         """Set the current X, Y, and Z coordinates to zero on every open port."""
         successful_devices = self._write_command("G92 X0 Y0 Z0")
+        for device in successful_devices:
+            state = self._device_states.get(device)
+            if state is not None:
+                state.movement_mode = None
         self._emit_command_sent(
             successful_devices,
             "SET CURRENT POSITION AS ORIGIN",
         )
+
+    def home_all_axes(self) -> None:
+        """Home every axis on every open serial port."""
+        successful_devices = self._write_command("G28")
+        for device in successful_devices:
+            state = self._device_states.get(device)
+            if state is not None:
+                state.movement_mode = None
+        self._emit_command_sent(successful_devices, "HOME ALL AXES")
 
     def move(
         self,

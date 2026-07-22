@@ -43,15 +43,18 @@ class MovementControl(QGroupBox):
         layout.setHorizontalSpacing(6)
         layout.setVerticalSpacing(8)
         layout.setColumnStretch(2, 1)
+        self._home_all_axes_button = QPushButton("Home All Axes", self)
+        self._home_all_axes_button.clicked.connect(self._home_all_axes)
+        layout.addWidget(self._home_all_axes_button, 0, 0, 1, 3)
         self._set_origin_button = QPushButton("Set Current Position as Origin", self)
         self._set_origin_button.clicked.connect(self._set_current_position_as_origin)
-        layout.addWidget(self._set_origin_button, 0, 0, 1, 3)
-        layout.addWidget(QLabel("Movement type", self), 1, 0)
-        layout.addWidget(QLabel(":", self), 1, 1)
+        layout.addWidget(self._set_origin_button, 1, 0, 1, 3)
+        layout.addWidget(QLabel("Movement type", self), 2, 0)
+        layout.addWidget(QLabel(":", self), 2, 1)
         self._movement_type_selector = QComboBox(self)
         self._movement_type_selector.addItem("Relative", MovementMode.RELATIVE)
         self._movement_type_selector.addItem("Absolute", MovementMode.ABSOLUTE)
-        layout.addWidget(self._movement_type_selector, 1, 2)
+        layout.addWidget(self._movement_type_selector, 2, 2)
         self._x_selector = self._create_coordinate_selector()
         self._y_selector = self._create_coordinate_selector()
         self._z_selector = self._create_coordinate_selector()
@@ -61,31 +64,31 @@ class MovementControl(QGroupBox):
                 ("Y", self._y_selector),
                 ("Z", self._z_selector),
             ),
-            start=2,
+            start=3,
         ):
             layout.addWidget(QLabel(axis, self), row_index, 0)
             layout.addWidget(QLabel(":", self), row_index, 1)
             layout.addWidget(selector, row_index, 2)
-        layout.addWidget(QLabel("Speed", self), 5, 0)
-        layout.addWidget(QLabel(":", self), 5, 1)
+        layout.addWidget(QLabel("Speed", self), 6, 0)
+        layout.addWidget(QLabel(":", self), 6, 1)
         self._speed_selector = QDoubleSpinBox(self)
         self._speed_selector.setRange(self.MINIMUM_SPEED_MM_S, self.MAXIMUM_SPEED_MM_S)
         self._speed_selector.setDecimals(3)
         self._speed_selector.setSingleStep(1.0)
         self._speed_selector.setSuffix(" mm/s")
         self._speed_selector.setValue(self.DEFAULT_SPEED_MM_S)
-        layout.addWidget(self._speed_selector, 5, 2)
+        layout.addWidget(self._speed_selector, 6, 2)
         self._send_movement_button = QPushButton("Send Movement", self)
         self._send_movement_button.clicked.connect(self._send_movement)
         layout.addWidget(
             self._send_movement_button,
-            6,
+            7,
             0,
             1,
             3,
             alignment=Qt.AlignmentFlag.AlignCenter,
         )
-        layout.setRowStretch(7, 1)
+        layout.setRowStretch(8, 1)
         # Keep command availability aligned with actual open connections.
         self._serial_port_monitor.serial_connection_changed.connect(
             self._handle_serial_connection_changed
@@ -103,6 +106,9 @@ class MovementControl(QGroupBox):
 
     def _set_current_position_as_origin(self) -> None:
         self._gcode_controller.set_current_position_as_origin()
+
+    def _home_all_axes(self) -> None:
+        self._gcode_controller.home_all_axes()
 
     def _send_movement(self) -> None:
         movement_mode = self._movement_type_selector.currentData()
@@ -125,5 +131,6 @@ class MovementControl(QGroupBox):
         self._set_command_buttons_enabled(bool(self._serial_port_monitor.connected_devices))
 
     def _set_command_buttons_enabled(self, enabled: bool) -> None:
+        self._home_all_axes_button.setEnabled(enabled)
         self._set_origin_button.setEnabled(enabled)
         self._send_movement_button.setEnabled(enabled)
