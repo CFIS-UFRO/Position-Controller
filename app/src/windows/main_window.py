@@ -16,11 +16,14 @@ from PySide6.QtWidgets import (
 )
 
 from src.config import APP_NAME
+from src.utils.gcode_controller import GCodeController
 from src.utils.paths import get_pyproject_file_path
 from src.utils.releases import get_pyproject_version
 from src.utils.serial_port_monitor import SerialPortMonitor
 from src.widgets.device_serial_port_selector import DeviceSerialPortSelector
+from src.widgets.movement_control import MovementControl
 from src.widgets.serial_communication_control import SerialCommunicationControl
+from src.widgets.terminal_widget import TerminalWidget
 from src.windows.help_window import HelpWindow
 from src.windows.release_update_window import ReleaseUpdateWindow
 
@@ -43,6 +46,7 @@ class MainWindow(QMainWindow):
         self._help_window: HelpWindow | None = None
         self._release_update_window: ReleaseUpdateWindow | None = None
         self._serial_port_monitor = SerialPortMonitor(self)
+        self._gcode_controller = GCodeController(self._serial_port_monitor)
         # Shortcut and shutdown state
         self._shortcuts: list[QShortcut] = []
         self._closing_from_action = False
@@ -89,31 +93,81 @@ class MainWindow(QMainWindow):
         main_container_layout = QVBoxLayout(main_container_widget)
         main_container_layout.setContentsMargins(0, 0, 0, 0)
         main_container_layout.setSpacing(16)
+        controls_layout = QHBoxLayout()
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.setSpacing(16)
+        left_controls_widget = QWidget(main_container_widget)
+        left_controls_layout = QVBoxLayout(left_controls_widget)
+        left_controls_layout.setContentsMargins(0, 0, 0, 0)
+        left_controls_layout.setSpacing(16)
         self._device_serial_port_selector = DeviceSerialPortSelector(
             self._serial_port_monitor,
-            main_container_widget,
+            left_controls_widget,
         )
-        main_container_layout.addWidget(self._device_serial_port_selector)
+        left_controls_layout.addWidget(self._device_serial_port_selector)
         self._serial_communication_control = SerialCommunicationControl(
             self._device_serial_port_selector,
             self._serial_port_monitor,
+            left_controls_widget,
+        )
+        left_controls_layout.addWidget(self._serial_communication_control)
+        left_controls_layout.addStretch(1)
+        controls_layout.addWidget(left_controls_widget, 1)
+        self._movement_control = MovementControl(
+            self._gcode_controller,
+            self._serial_port_monitor,
             main_container_widget,
         )
-        main_container_layout.addWidget(self._serial_communication_control)
-        main_container_layout.addStretch(1)
-        main_container_row = QHBoxLayout()
-        main_container_row.setContentsMargins(0, 0, 0, 0)
-        main_container_row.setSpacing(0)
-        main_container_row.addStretch(1)
-        main_container_row.addWidget(main_container_widget)
-        main_container_row.addStretch(1)
-        layout.addLayout(main_container_row, 1)
+        controls_layout.addWidget(
+            self._movement_control,
+            1,
+            alignment=Qt.AlignmentFlag.AlignTop,
+        )
+        main_container_layout.addLayout(controls_layout, 1)
+        self._terminal_widget = TerminalWidget(main_container_widget)
+        main_container_layout.addWidget(self._terminal_widget)
+        layout.addWidget(main_container_widget, 1)
+        self._connect_serial_terminal()
         # Version footer
-        layout.addStretch(1)
         version_label = QLabel(f"Version {self._version}", central_widget)
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_label.setStyleSheet("font-size: 13px;")
         layout.addWidget(version_label)
+
+    def _connect_serial_terminal(self) -> None:
+        self._serial_port_monitor.serial_connection_changed.connect(
+            self._handle_serial_connection_changed
+        )
+        self._gcode_controller.command_sent.connect(
+            self._handle_gcode_command_sent
+        )
+        self._serial_port_monitor.serial_data_received.connect(
+            self._handle_serial_data_received
+        )
+        self._serial_port_monitor.serial_io_error.connect(
+            self._handle_serial_io_error
+        )
+
+    def _handle_serial_connection_changed(
+        self,
+        device: str,
+        connected: bool,
+        baud_rate: int,
+    ) -> None:
+        if connected:
+            message = f"Connected at {baud_rate:,} baud"
+        else:
+            message = "Disconnected"
+        self._terminal_widget.append_message("INFO", device, message)
+
+    def _handle_gcode_command_sent(self, device: str, description: str) -> None:
+        self._terminal_widget.append_message("TX", device, description)
+
+    def _handle_serial_data_received(self, device: str, message: str) -> None:
+        self._terminal_widget.append_message("RX", device, message)
+
+    def _handle_serial_io_error(self, device: str, error_message: str) -> None:
+        self._terminal_widget.append_message("ERROR", device, error_message)
 
     def _configure_shortcuts(self) -> None:
         """Configure application-level restart and quit shortcuts."""
