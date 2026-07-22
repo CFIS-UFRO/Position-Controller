@@ -15,6 +15,7 @@ UV_BIN="$UV_DIR/uv"
 UV_CACHE_DIR="$UV_DIR/cache"
 UV_PYTHON_INSTALL_DIR="$UV_DIR/python"
 UV_PROJECT_ENVIRONMENT="$UV_DIR/venv"
+UV_MANAGED_PYTHON=1 # Require uv-managed Python
 MAIN_FILE="$APP_DIR/main.py"
 RELEASE_MODULE="scripts.create_release"
 FAKE_SERIAL_PORT_MODULE="scripts.fake_serial_port"
@@ -46,6 +47,7 @@ fi
 export UV_CACHE_DIR
 export UV_PYTHON_INSTALL_DIR
 export UV_PROJECT_ENVIRONMENT
+export UV_MANAGED_PYTHON
 
 # --------------------------------------------------------------------------------------------------
 # Developer release

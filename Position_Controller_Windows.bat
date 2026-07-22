@@ -15,6 +15,8 @@ set "UV_BIN=%UV_DIR%\uv.exe"
 set "UV_CACHE_DIR=%UV_DIR%\cache"
 set "UV_PYTHON_INSTALL_DIR=%UV_DIR%\python"
 set "UV_PROJECT_ENVIRONMENT=%UV_DIR%\venv"
+REM Require uv-managed Python
+set "UV_MANAGED_PYTHON=1"
 set "MAIN_FILE=%APP_DIR%\main.py"
 set "RELEASE_MODULE=scripts.create_release"
 cd /d "%APP_DIR%"
