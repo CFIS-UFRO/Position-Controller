@@ -174,11 +174,8 @@ class MainWindow(QMainWindow):
             self._handle_serial_connection_changed
         )
         # Terminal events
-        self._gcode_controller.command_sent.connect(
-            self._handle_serial_message_sent
-        )
-        self._custom_message_control.message_sent.connect(
-            self._handle_serial_message_sent
+        self._serial_port_monitor.serial_data_sent.connect(
+            self._handle_serial_data_sent
         )
         self._serial_port_monitor.serial_data_received.connect(
             self._handle_serial_data_received
@@ -200,8 +197,9 @@ class MainWindow(QMainWindow):
             message = "Disconnected"
         self._terminal_widget.append_message("INFO", device, message)
 
-    @Slot(str, str)
-    def _handle_serial_message_sent(self, device: str, message: str) -> None:
+    @Slot(str, bytes)
+    def _handle_serial_data_sent(self, device: str, data: bytes) -> None:
+        message = data.decode("utf-8", errors="replace")
         self._terminal_widget.append_message("TX", device, message)
 
     @Slot(str, str)

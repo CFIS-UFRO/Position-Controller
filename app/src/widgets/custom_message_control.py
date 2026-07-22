@@ -1,6 +1,6 @@
 """Controls for sending custom messages over active serial connections."""
 
-from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
     QGroupBox,
     QLineEdit,
@@ -17,8 +17,6 @@ from src.utils.serial_port_monitor import SerialPortMonitor
 # --------------------------------------------------------------------------------------------------
 class CustomMessageControl(QGroupBox):
     """Broadcast user-entered messages to all open serial ports."""
-
-    message_sent = Signal(str, str)
 
     def __init__(
         self,
@@ -63,8 +61,6 @@ class CustomMessageControl(QGroupBox):
         successful_devices = self._serial_port_monitor.broadcast_write(
             f"{message}\n".encode("utf-8")
         )
-        for device in successful_devices:
-            self.message_sent.emit(device, message)
         if successful_devices:
             self._message_input.clear()
 

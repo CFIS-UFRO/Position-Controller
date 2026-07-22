@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 from enum import Enum
 
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, Slot
 
 from src.utils.serial_port_monitor import SerialPortMonitor
 
@@ -33,8 +33,6 @@ class _DeviceGCodeState:
 class GCodeController(QObject):
     """Generate motion G-code and broadcast it through the serial monitor."""
 
-    command_sent = Signal(str, str)
-
     def __init__(self, serial_port_monitor: SerialPortMonitor) -> None:
         super().__init__(serial_port_monitor)
         self._serial_port_monitor = serial_port_monitor
@@ -50,10 +48,6 @@ class GCodeController(QObject):
             state = self._device_states.get(device)
             if state is not None:
                 state.movement_mode = None
-        self._emit_command_sent(
-            successful_devices,
-            "SET CURRENT POSITION AS ORIGIN",
-        )
 
     def home_all_axes(self) -> None:
         """Home every axis on every open serial port."""
@@ -62,7 +56,6 @@ class GCodeController(QObject):
             state = self._device_states.get(device)
             if state is not None:
                 state.movement_mode = None
-        self._emit_command_sent(successful_devices, "HOME ALL AXES")
 
     def move(
         self,
@@ -104,10 +97,6 @@ class GCodeController(QObject):
             state = self._device_states.get(device)
             if state is not None:
                 state.uses_millimeters = True
-        self._emit_command_sent(
-            configured_millimeter_devices,
-            "SET UNITS TO MILLIMETERS",
-        )
         mode_devices: list[str] = []
         for device in target_devices:
             state = self._device_states.get(device)
@@ -126,10 +115,6 @@ class GCodeController(QObject):
             state = self._device_states.get(device)
             if state is not None:
                 state.movement_mode = mode
-        self._emit_command_sent(
-            configured_mode_devices,
-            f"SET POSITIONING MODE TO {mode.name}",
-        )
         movement_devices: list[str] = []
         for device in target_devices:
             state = self._device_states.get(device)
@@ -140,13 +125,9 @@ class GCodeController(QObject):
                 and self._serial_port_monitor.is_device_connected(device)
             ):
                 movement_devices.append(device)
-        successful_devices = self._write_command(
+        self._write_command(
             f"G1 {movement_parameters}",
             devices=movement_devices,
-        )
-        self._emit_command_sent(
-            successful_devices,
-            f"{mode.name} MOVE {movement_parameters}",
         )
 
     @Slot(str, bool, int)
@@ -172,10 +153,6 @@ class GCodeController(QObject):
             f"{command}\n".encode("ascii"),
             devices=devices,
         )
-
-    def _emit_command_sent(self, devices: list[str], description: str) -> None:
-        for device in devices:
-            self.command_sent.emit(device, description)
 
     @staticmethod
     def _format_number(value: float) -> str:

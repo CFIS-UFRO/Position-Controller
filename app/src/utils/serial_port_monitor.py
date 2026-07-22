@@ -63,6 +63,7 @@ class SerialPortMonitor(QObject):
 
     serial_ports_changed = Signal(list)
     serial_connection_changed = Signal(str, bool, int)
+    serial_data_sent = Signal(str, bytes)
     serial_data_received = Signal(str, str)
     serial_io_error = Signal(str, str)
 
@@ -220,6 +221,7 @@ class SerialPortMonitor(QObject):
                 self.close_connection(device)
                 continue
             successful_devices.append(device)
+            self.serial_data_sent.emit(device, data)
         return successful_devices
 
     def synchronize_connections(self, device_baud_rates: dict[str, int]) -> None:
