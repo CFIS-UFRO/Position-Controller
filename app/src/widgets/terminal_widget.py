@@ -1,6 +1,6 @@
 """Bounded terminal-style serial communication display."""
 
-from PySide6.QtCore import QDateTime
+from PySide6.QtCore import QDateTime, Qt, Slot
 from PySide6.QtGui import QColor, QFontDatabase, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QPlainTextEdit,
@@ -9,41 +9,27 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from src.utils.logging import logger
+from src.utils.logging import qt_log_handler
 from src.widgets.help_group_box import HelpGroupBox
 
 # --------------------------------------------------------------------------------------------------
 # Widget
 # --------------------------------------------------------------------------------------------------
 class TerminalWidget(HelpGroupBox):
-    """Display timestamped serial events in a bounded terminal view."""
+    """Display timestamped log records in a bounded terminal view."""
 
     MAXIMUM_LINE_COUNT = 500
     FIXED_HEIGHT = 160
     DEFAULT_TEXT_COLOR = "#E0E0E0"
     EVENT_TEXT_COLORS = {
-        "DEBUG": "#90A4AE",
         "INFO": "#40C4FF",
-        "TX": "#B2FF59",
-        "RX": "#00E676",
-        "SUCCESS": "#64FFDA",
         "WARNING": "#FFD740",
-        "WARN": "#FFD740",
         "ERROR": "#FF5252",
         "CRITICAL": "#FF4081",
-        "FATAL": "#FF4081",
     }
-    EVENT_LOG_LEVELS = {
-        "DEBUG": logger.debug,
-        "INFO": logger.info,
-        "TX": logger.info,
-        "RX": logger.info,
-        "SUCCESS": logger.info,
-        "WARNING": logger.warning,
-        "WARN": logger.warning,
-        "ERROR": logger.error,
-        "CRITICAL": logger.critical,
-        "FATAL": logger.critical,
+    SERIAL_MESSAGE_TEXT_COLORS = {
+        "[TX] ": "#B2FF59",
+        "[RX] ": "#00E676",
     }
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -68,33 +54,36 @@ class TerminalWidget(HelpGroupBox):
             "}"
         )
         layout.addWidget(self._output)
-
-    def append_message(self, event_type: str, device: str, message: str) -> None:
-        """Append one or more timestamped event lines and scroll to the newest."""
-        timestamp = QDateTime.currentDateTime().toString("HH:mm:ss")
-        message_lines = message.splitlines() or [""]
-        normalized_event_type = event_type.upper()
-        text_format = QTextCharFormat()
-        text_format.setForeground(
-            QColor(
-                self.EVENT_TEXT_COLORS.get(
-                    normalized_event_type,
-                    self.DEFAULT_TEXT_COLOR,
-                )
-            )
+        qt_log_handler.emitter.message_logged.connect(
+            self.append_message,
+            Qt.ConnectionType.QueuedConnection,
         )
+
+    @Slot(float, str, str)
+    def append_message(self, created_at: float, level_name: str, message: str) -> None:
+        """Append one or more formatted log lines and scroll to the newest."""
+        timestamp = QDateTime.fromMSecsSinceEpoch(
+            int(created_at * 1_000)
+        ).toString("HH:mm:ss")
+        message_lines = message.splitlines() or [""]
+        normalized_level_name = level_name.upper()
         cursor = self._output.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
-        log_message = self.EVENT_LOG_LEVELS.get(
-            normalized_event_type,
-            logger.info,
-        )
         for message_line in message_lines:
-            log_message(f"[{event_type}] [{device}] {message_line}")
+            text_color = self.EVENT_TEXT_COLORS.get(
+                normalized_level_name,
+                self.DEFAULT_TEXT_COLOR,
+            )
+            for prefix, serial_text_color in self.SERIAL_MESSAGE_TEXT_COLORS.items():
+                if message_line.startswith(prefix):
+                    text_color = serial_text_color
+                    break
+            text_format = QTextCharFormat()
+            text_format.setForeground(QColor(text_color))
             if not self._output.document().isEmpty():
                 cursor.insertBlock()
             cursor.insertText(
-                f"[{timestamp}] [{event_type}] [{device}] {message_line}",
+                f"[{timestamp}] [{level_name}] {message_line}",
                 text_format,
             )
         vertical_scroll_bar = self._output.verticalScrollBar()

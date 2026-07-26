@@ -221,6 +221,8 @@ class SerialPortMonitor(QObject):
                 self.close_connection(device)
                 continue
             successful_devices.append(device)
+            message = data.decode("utf-8", errors="replace")
+            self._log_serial_data("TX", device, message)
             self.serial_data_sent.emit(device, data)
         return successful_devices
 
@@ -267,6 +269,7 @@ class SerialPortMonitor(QObject):
     @Slot(str, str)
     def _handle_data_received(self, device: str, message: str) -> None:
         if device in self._serial_connections:
+            self._log_serial_data("RX", device, message)
             self.serial_data_received.emit(device, message)
 
     @Slot(str, str)
@@ -297,6 +300,11 @@ class SerialPortMonitor(QObject):
             self._connection_errors.pop(device, None)
         if previous_ports.keys() != current_ports.keys():
             self.serial_ports_changed.emit(self.serial_ports)
+
+    @staticmethod
+    def _log_serial_data(direction: str, device: str, message: str) -> None:
+        for message_line in message.splitlines() or [""]:
+            logger.info(f"[{direction}] [{device}] {message_line}")
 
     @staticmethod
     def get_available_serial_ports() -> list[ListPortInfo]:

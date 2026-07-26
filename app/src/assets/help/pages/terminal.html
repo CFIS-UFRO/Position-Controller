@@ -6,15 +6,22 @@
 </head>
 <body>
   <h1>Terminal</h1>
-  <p>Use the terminal to see what the application sent, what the devices replied, and any connection errors.</p>
-  <p>Each line shows the time, event type, device and message.</p>
-  <h2>What the Labels Mean</h2>
+  <p>Use the terminal to follow application activity, including connection changes, warnings, errors, messages sent to devices, and device replies.</p>
+  <p>Each line shows the time, log level, and message.</p>
+  <h2>Log Levels</h2>
   <ul>
-    <li><code>INFO</code>: general application or connection information.</li>
-    <li><code>TX</code>: a message sent to a device.</li>
-    <li><code>RX</code>: a message received from a device.</li>
-    <li><code>ERROR</code>: something went wrong while communicating with a device.</li>
+    <li><code>INFO</code>: normal application, connection, or serial communication activity.</li>
+    <li><code>WARNING</code>: something unexpected happened, but the application can continue.</li>
+    <li><code>ERROR</code>: an operation failed.</li>
+    <li><code>CRITICAL</code>: a serious application error occurred.</li>
   </ul>
+  <h2>Serial Messages</h2>
+  <p>Serial communication appears as an <code>INFO</code> entry with additional labels:</p>
+  <ul>
+    <li><code>[TX] [device] message</code>: a message sent to the named device.</li>
+    <li><code>[RX] [device] message</code>: a message received from the named device.</li>
+  </ul>
+  <p>TX and RX lines use distinct green colors so they are easy to identify.</p>
   <p>The terminal keeps the latest 500 lines, so older entries disappear as new ones arrive.</p>
 </body>
 </html>

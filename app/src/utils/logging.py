@@ -11,6 +11,7 @@ from types import TracebackType
 from typing import TextIO
 
 from colorlog import ColoredFormatter
+from PySide6.QtCore import QObject, Signal
 
 from src.utils.paths import get_log_file_path
 
@@ -30,6 +31,29 @@ class StripAnsiFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         return ANSI_ESCAPE_RE.sub("", super().format(record))
+# --------------------------------------------------------------------------------------------------
+class _QtLogEmitter(QObject):
+    """Emit formatted log records through Qt's thread-safe signal delivery."""
+
+    message_logged = Signal(float, str, str)
+# --------------------------------------------------------------------------------------------------
+class QtLogHandler(logging.Handler):
+    """Forward formatted log records to Qt slots."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.emitter = _QtLogEmitter()
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            message = self.format(record)
+            self.emitter.message_logged.emit(
+                record.created,
+                record.levelname,
+                message,
+            )
+        except Exception:
+            self.handleError(record)
 # --------------------------------------------------------------------------------------------------
 class StreamToLogger:
     """Redirect a text stream to the configured logger."""
@@ -72,7 +96,7 @@ class ExceptionHandler:
 # Configuration
 # --------------------------------------------------------------------------------------------------
 def init_logging() -> Path:
-    """Configure console, rotating-file, stream, warning, and exception logging."""
+    """Configure console, file, Qt, stream, warning, and exception logging."""
     log_file_path = get_log_file_path()
     if getattr(logger, "_position_controller_initialized", False):
         return log_file_path
@@ -100,6 +124,8 @@ def init_logging() -> Path:
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(file_formatter)
     logger.addHandler(file_handler)
+    qt_log_handler.setLevel(logging.INFO)
+    logger.addHandler(qt_log_handler)
     sys.stdout = StreamToLogger(logger, logging.INFO, sys.__stdout__)
     sys.stderr = StreamToLogger(logger, logging.ERROR, sys.__stderr__)
     sys.excepthook = ExceptionHandler(logger)
@@ -117,6 +143,7 @@ def log_tree(items: Sequence[str], header: str | None = None, level: int = loggi
         logger.log(level, f"{branch} {item}")
 
 # --------------------------------------------------------------------------------------------------
-# Shared logger
+# Shared logging objects
 # --------------------------------------------------------------------------------------------------
 logger = logging.getLogger()
+qt_log_handler = QtLogHandler()

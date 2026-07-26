@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QCloseEvent, QCursor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from src.config import APP_NAME
 from src.utils.gcode_controller import GCodeController
+from src.utils.logging import logger
 from src.utils.paths import get_pyproject_file_path
 from src.utils.releases import get_pyproject_version
 from src.utils.serial_port_monitor import SerialPortMonitor
@@ -61,11 +62,7 @@ class MainWindow(QMainWindow):
         self._connect_application_signals()
         self._configure_shortcuts()
         self._serial_port_monitor.start()
-        self._terminal_widget.append_message(
-            "INFO",
-            "Application",
-            f"Welcome to {APP_NAME}",
-        )
+        QTimer.singleShot(2000, lambda: logger.info(f"Welcome to {APP_NAME}"))
 
     def _build_content(self) -> None:
         # Central container and layout
@@ -182,45 +179,6 @@ class MainWindow(QMainWindow):
         self._serial_port_monitor.serial_connection_changed.connect(
             self._custom_message_control.handle_serial_connection_changed
         )
-        self._serial_port_monitor.serial_connection_changed.connect(
-            self._handle_serial_connection_changed
-        )
-        # Terminal events
-        self._serial_port_monitor.serial_data_sent.connect(
-            self._handle_serial_data_sent
-        )
-        self._serial_port_monitor.serial_data_received.connect(
-            self._handle_serial_data_received
-        )
-        self._serial_port_monitor.serial_io_error.connect(
-            self._handle_serial_io_error
-        )
-
-    @Slot(str, bool, int)
-    def _handle_serial_connection_changed(
-        self,
-        device: str,
-        connected: bool,
-        baud_rate: int,
-    ) -> None:
-        if connected:
-            message = f"Connected at {baud_rate:,} baud"
-        else:
-            message = "Disconnected"
-        self._terminal_widget.append_message("INFO", device, message)
-
-    @Slot(str, bytes)
-    def _handle_serial_data_sent(self, device: str, data: bytes) -> None:
-        message = data.decode("utf-8", errors="replace")
-        self._terminal_widget.append_message("TX", device, message)
-
-    @Slot(str, str)
-    def _handle_serial_data_received(self, device: str, message: str) -> None:
-        self._terminal_widget.append_message("RX", device, message)
-
-    @Slot(str, str)
-    def _handle_serial_io_error(self, device: str, error_message: str) -> None:
-        self._terminal_widget.append_message("ERROR", device, error_message)
 
     def _configure_shortcuts(self) -> None:
         """Configure application-level restart and quit shortcuts."""
