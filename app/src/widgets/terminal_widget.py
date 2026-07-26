@@ -19,7 +19,8 @@ class TerminalWidget(HelpGroupBox):
     """Display timestamped log records in a bounded terminal view."""
 
     MAXIMUM_LINE_COUNT = 500
-    FIXED_HEIGHT = 160
+    INITIAL_HEIGHT = 250
+    MINIMUM_HEIGHT = 96
     DEFAULT_TEXT_COLOR = "#E0E0E0"
     EVENT_TEXT_COLORS = {
         "INFO": "#40C4FF",
@@ -34,8 +35,11 @@ class TerminalWidget(HelpGroupBox):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__("Terminal", "terminal", parent)
-        self.setFixedHeight(self.FIXED_HEIGHT)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMinimumHeight(self.MINIMUM_HEIGHT)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
         layout = QVBoxLayout(self.content_group_box)
         layout.setContentsMargins(8, 8, 8, 8)
         self._output = QPlainTextEdit(self.content_group_box)

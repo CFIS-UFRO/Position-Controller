@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QPushButton,
+    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -98,10 +99,11 @@ class MainWindow(QMainWindow):
         main_container_layout = QVBoxLayout(main_container_widget)
         main_container_layout.setContentsMargins(0, 0, 0, 0)
         main_container_layout.setSpacing(16)
-        controls_layout = QHBoxLayout()
+        controls_widget = QWidget(main_container_widget)
+        controls_layout = QHBoxLayout(controls_widget)
         controls_layout.setContentsMargins(0, 0, 0, 0)
         controls_layout.setSpacing(16)
-        left_controls_widget = QWidget(main_container_widget)
+        left_controls_widget = QWidget(controls_widget)
         left_controls_layout = QVBoxLayout(left_controls_widget)
         left_controls_layout.setContentsMargins(0, 0, 0, 0)
         left_controls_layout.setSpacing(16)
@@ -121,14 +123,14 @@ class MainWindow(QMainWindow):
         self._movement_control = MovementControl(
             self._gcode_controller,
             self._serial_port_monitor,
-            main_container_widget,
+            controls_widget,
         )
         controls_layout.addWidget(
             self._movement_control,
             1,
             alignment=Qt.AlignmentFlag.AlignTop,
         )
-        right_controls_widget = QWidget(main_container_widget)
+        right_controls_widget = QWidget(controls_widget)
         right_controls_layout = QVBoxLayout(right_controls_widget)
         right_controls_layout.setContentsMargins(0, 0, 0, 0)
         right_controls_layout.setSpacing(16)
@@ -145,9 +147,19 @@ class MainWindow(QMainWindow):
         right_controls_layout.addWidget(self._custom_message_control)
         right_controls_layout.addStretch(1)
         controls_layout.addWidget(right_controls_widget, 1)
-        main_container_layout.addLayout(controls_layout, 1)
-        self._terminal_widget = TerminalWidget(main_container_widget)
-        main_container_layout.addWidget(self._terminal_widget)
+        content_splitter = QSplitter(
+            Qt.Orientation.Vertical,
+            main_container_widget,
+        )
+        content_splitter.setChildrenCollapsible(False)
+        content_splitter.setHandleWidth(8)
+        content_splitter.addWidget(controls_widget)
+        self._terminal_widget = TerminalWidget(content_splitter)
+        content_splitter.addWidget(self._terminal_widget)
+        content_splitter.setStretchFactor(0, 1)
+        content_splitter.setStretchFactor(1, 0)
+        content_splitter.setSizes([1_000, TerminalWidget.INITIAL_HEIGHT])
+        main_container_layout.addWidget(content_splitter)
         layout.addWidget(main_container_widget, 1)
         # Version footer
         version_label = QLabel(f"Version {self._version}", central_widget)
