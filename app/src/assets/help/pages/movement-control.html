@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Movement Control</title>
+</head>
+<body>
+  <h1>Movement Control</h1>
+  <p>Use this panel to home the connected devices, set their origin, or send a movement.</p>
+  <h2>Homing</h2>
+  <p><strong>Home</strong> tells every connected device to move all axes to their hardware home position using <code>G28</code>.</p>
+  <p>This can start motion immediately. Make sure the path is clear, the limit switches are working, and every connected device can be homed safely. The exact sequence depends on the controller firmware.</p>
+  <h2>Setting the Origin</h2>
+  <p><strong>Set Current Position as Origin</strong> marks the current X, Y and Z position as zero using <code>G92 X0 Y0 Z0</code>. It changes the coordinates but does not move the device.</p>
+  <p>Absolute movements will use this new origin. Homing is different: it finds a hardware reference, while setting the origin creates a coordinate reference wherever the device is now.</p>
+  <h2>Movement Type</h2>
+  <ul>
+    <li><strong>Relative:</strong> move by the entered distance from the current position.</li>
+    <li><strong>Absolute:</strong> move to the entered coordinates relative to the current origin.</li>
+  </ul>
+  <h2>Coordinates and Speed</h2>
+  <p>Enter X, Y and Z in millimetres and the speed in millimetres per second. Click <strong>Send Movement</strong> to send the same <code>G1</code> movement to every connected device.</p>
+  <p>Before sending it, double-check the movement type, origin, coordinates and available travel.</p>
+</body>
+</html>

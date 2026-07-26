@@ -7,12 +7,15 @@
 <body>
   <h1>Getting Started</h1>
   <h2>Launch the Application</h2>
-  <p>Use the launcher for your operating system from the outer project directory:</p>
+  <p>On Linux or macOS, open a terminal in the project folder and run the launcher for your system:</p>
   <ul>
-    <li><strong>Linux:</strong> <code>Linux_Position_Controller.sh</code></li>
-    <li><strong>macOS:</strong> <code>Mac_Position_Controller.command</code></li>
-    <li><strong>Windows:</strong> <code>Windows_Position_Controller.bat</code></li>
+    <li><strong>Linux:</strong> <code>./Linux_Position_Controller.sh</code></li>
+    <li><strong>macOS:</strong> <code>./Mac_Position_Controller.command</code></li>
   </ul>
-  <p>The first launch installs the required Python runtime and dependencies inside the application directory.</p>
+  <p>On Windows, double-click <code>Windows_Position_Controller.bat</code>.</p>
+  <p>The first run may take a little longer because the launcher downloads Python and the required packages. You only need an internet connection for this initial setup and future updates.</p>
+  <h2>What You Can Do</h2>
+  <p>Position Controller can work with a positioning system that accepts G-code over a serial connection. Connect the controller to your computer, select its serial port and baud rate, then start serial communication.</p>
+  <p>Once connected, you can home the system, set its current position as the origin, and send relative or absolute movements. You can also use the keyboard controls or send a custom G-code command when needed.</p>
 </body>
 </html>

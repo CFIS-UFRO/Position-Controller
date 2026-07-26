@@ -4,7 +4,6 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
-    QGroupBox,
     QLabel,
     QPushButton,
     QSizePolicy,
@@ -16,11 +15,12 @@ from src.utils.logging import logger
 from src.utils.serial_port_monitor import SerialPortMonitor
 from src.widgets.badge_widget import BadgeWidget
 from src.widgets.device_serial_port_selector import DeviceSerialPortSelector
+from src.widgets.help_group_box import HelpGroupBox
 
 # --------------------------------------------------------------------------------------------------
 # Widget
 # --------------------------------------------------------------------------------------------------
-class SerialCommunicationControl(QGroupBox):
+class SerialCommunicationControl(HelpGroupBox):
     """Open selected serial ports and display their communication status."""
 
     def __init__(
@@ -29,28 +29,25 @@ class SerialCommunicationControl(QGroupBox):
         serial_port_monitor: SerialPortMonitor,
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__("Serial Communication", parent)
+        super().__init__("Serial Communication", "serial-communication", parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self._device_selector = device_selector
         self._serial_port_monitor = serial_port_monitor
         self._communication_active = False
         # Status display and communication control
-        layout = QVBoxLayout(self)
+        layout = QVBoxLayout(self.content_group_box)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(12)
-        self._status_widget = QWidget(self)
+        self._status_widget = QWidget(self.content_group_box)
         self._status_layout = QGridLayout(self._status_widget)
         self._status_layout.setContentsMargins(0, 0, 0, 0)
         self._status_layout.setHorizontalSpacing(6)
         self._status_layout.setVerticalSpacing(8)
         self._status_layout.setColumnStretch(2, 1)
         layout.addWidget(self._status_widget)
-        self._communication_button = QPushButton("Start", self)
+        self._communication_button = QPushButton("Start", self.content_group_box)
         self._communication_button.clicked.connect(self._toggle_communication)
-        layout.addWidget(
-            self._communication_button,
-            alignment=Qt.AlignmentFlag.AlignCenter,
-        )
+        layout.addWidget(self._communication_button)
         self._refresh_status_display()
 
     @property

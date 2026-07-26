@@ -3,7 +3,6 @@
 from PySide6.QtCore import QDateTime
 from PySide6.QtGui import QColor, QFontDatabase, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
-    QGroupBox,
     QPlainTextEdit,
     QSizePolicy,
     QVBoxLayout,
@@ -11,11 +10,12 @@ from PySide6.QtWidgets import (
 )
 
 from src.utils.logging import logger
+from src.widgets.help_group_box import HelpGroupBox
 
 # --------------------------------------------------------------------------------------------------
 # Widget
 # --------------------------------------------------------------------------------------------------
-class TerminalWidget(QGroupBox):
+class TerminalWidget(HelpGroupBox):
     """Display timestamped serial events in a bounded terminal view."""
 
     MAXIMUM_LINE_COUNT = 500
@@ -47,12 +47,12 @@ class TerminalWidget(QGroupBox):
     }
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("Terminal", parent)
+        super().__init__("Terminal", "terminal", parent)
         self.setFixedHeight(self.FIXED_HEIGHT)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        layout = QVBoxLayout(self)
+        layout = QVBoxLayout(self.content_group_box)
         layout.setContentsMargins(8, 8, 8, 8)
-        self._output = QPlainTextEdit(self)
+        self._output = QPlainTextEdit(self.content_group_box)
         self._output.setReadOnly(True)
         self._output.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self._output.setFont(

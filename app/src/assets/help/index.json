@@ -3,5 +3,35 @@
     "id": "getting-started",
     "title": "Getting Started",
     "file": "pages/getting-started.html"
+  },
+  {
+    "id": "device-selection",
+    "title": "Device Selection",
+    "file": "pages/device-selection.html"
+  },
+  {
+    "id": "serial-communication",
+    "title": "Serial Communication",
+    "file": "pages/serial-communication.html"
+  },
+  {
+    "id": "movement-control",
+    "title": "Movement Control",
+    "file": "pages/movement-control.html"
+  },
+  {
+    "id": "keyboard-movement",
+    "title": "Keyboard Movement",
+    "file": "pages/keyboard-movement.html"
+  },
+  {
+    "id": "custom-message",
+    "title": "Custom Messages",
+    "file": "pages/custom-message.html"
+  },
+  {
+    "id": "terminal",
+    "title": "Terminal",
+    "file": "pages/terminal.html"
   }
 ]

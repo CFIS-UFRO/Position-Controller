@@ -4,7 +4,6 @@ from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import (
     QComboBox,
     QGridLayout,
-    QGroupBox,
     QLabel,
     QSizePolicy,
     QSpinBox,
@@ -13,11 +12,12 @@ from PySide6.QtWidgets import (
 from serial.tools.list_ports_common import ListPortInfo
 
 from src.utils.serial_port_monitor import SerialPortMonitor
+from src.widgets.help_group_box import HelpGroupBox
 
 # --------------------------------------------------------------------------------------------------
 # Widget
 # --------------------------------------------------------------------------------------------------
-class DeviceSerialPortSelector(QGroupBox):
+class DeviceSerialPortSelector(HelpGroupBox):
     """Select a unique serial port for each configured device."""
 
     configuration_changed = Signal()
@@ -32,7 +32,7 @@ class DeviceSerialPortSelector(QGroupBox):
         serial_port_monitor: SerialPortMonitor,
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__("Devices Selection", parent)
+        super().__init__("Devices Selection", "device-selection", parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         # Serial-port and per-row selection state
         self._available_serial_ports = serial_port_monitor.serial_ports
@@ -49,20 +49,24 @@ class DeviceSerialPortSelector(QGroupBox):
             tuple[str, ...],
         ] | None = None
         # Label-and-control grid
-        self._grid_layout = QGridLayout(self)
+        self._grid_layout = QGridLayout(self.content_group_box)
         self._grid_layout.setContentsMargins(8, 8, 8, 8)
         self._grid_layout.setHorizontalSpacing(6)
         self._grid_layout.setVerticalSpacing(8)
         self._grid_layout.setColumnStretch(2, 1)
-        self._grid_layout.addWidget(QLabel("Number of devices", self), 0, 0)
-        self._grid_layout.addWidget(QLabel(":", self), 0, 1)
-        self._device_count_selector = QSpinBox(self)
+        self._grid_layout.addWidget(
+            QLabel("Number of devices", self.content_group_box),
+            0,
+            0,
+        )
+        self._grid_layout.addWidget(QLabel(":", self.content_group_box), 0, 1)
+        self._device_count_selector = QSpinBox(self.content_group_box)
         self._device_count_selector.setRange(self.MIN_DEVICE_COUNT, self.MAX_DEVICE_COUNT)
         self._device_count_selector.setValue(self.MIN_DEVICE_COUNT)
         self._device_count_selector.valueChanged.connect(self._set_device_count)
         self._grid_layout.addWidget(self._device_count_selector, 0, 2, 1, 2)
-        self._grid_layout.addWidget(QLabel("Serial port", self), 1, 2)
-        self._grid_layout.addWidget(QLabel("Baud rate", self), 1, 3)
+        self._grid_layout.addWidget(QLabel("Serial port", self.content_group_box), 1, 2)
+        self._grid_layout.addWidget(QLabel("Baud rate", self.content_group_box), 1, 3)
         self._set_device_count(self._device_count_selector.value())
 
     def get_selected_devices(self) -> list[str | None]:
@@ -111,13 +115,13 @@ class DeviceSerialPortSelector(QGroupBox):
     def _add_device_row(self) -> None:
         # Build one labeled selector and initialize its remembered assignment.
         row_number = len(self._device_labels) + 1
-        label = QLabel(f"Device {row_number}", self)
-        separator = QLabel(":", self)
-        selector = QComboBox(self)
+        label = QLabel(f"Device {row_number}", self.content_group_box)
+        separator = QLabel(":", self.content_group_box)
+        selector = QComboBox(self.content_group_box)
         selector.addItem("None")
         selector.setEnabled(self._selection_enabled)
         selector.currentIndexChanged.connect(self._handle_device_selection_changed)
-        baud_rate_selector = QComboBox(self)
+        baud_rate_selector = QComboBox(self.content_group_box)
         for baud_rate in self.BAUD_RATES:
             baud_rate_selector.addItem(f"{baud_rate:,}", baud_rate)
         baud_rate_selector.setCurrentIndex(

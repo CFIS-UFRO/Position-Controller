@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QGridLayout,
-    QGroupBox,
     QLabel,
     QSizePolicy,
     QWidget,
@@ -15,11 +14,12 @@ from PySide6.QtWidgets import (
 
 from src.utils.gcode_controller import GCodeController, MovementMode
 from src.utils.serial_port_monitor import SerialPortMonitor
+from src.widgets.help_group_box import HelpGroupBox
 
 # --------------------------------------------------------------------------------------------------
 # Widget
 # --------------------------------------------------------------------------------------------------
-class KeyboardMovementControl(QGroupBox):
+class KeyboardMovementControl(HelpGroupBox):
     """Send configurable relative movements with keyboard keys."""
 
     MINIMUM_DISTANCE_MM = 0.001
@@ -43,19 +43,19 @@ class KeyboardMovementControl(QGroupBox):
         serial_port_monitor: SerialPortMonitor,
         parent: QWidget | None = None,
     ) -> None:
-        super().__init__("Keyboard Movement", parent)
+        super().__init__("Keyboard Movement", "keyboard-movement", parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self._gcode_controller = gcode_controller
         self._serial_port_monitor = serial_port_monitor
         # Keyboard movement form
-        layout = QGridLayout(self)
+        layout = QGridLayout(self.content_group_box)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setHorizontalSpacing(6)
         layout.setVerticalSpacing(8)
         layout.setColumnStretch(2, 1)
-        layout.addWidget(QLabel("Keyboard control", self), 0, 0)
-        layout.addWidget(QLabel(":", self), 0, 1)
-        self._activation_selector = QComboBox(self)
+        layout.addWidget(QLabel("Keyboard control", self.content_group_box), 0, 0)
+        layout.addWidget(QLabel(":", self.content_group_box), 0, 1)
+        self._activation_selector = QComboBox(self.content_group_box)
         self._activation_selector.addItem("Disabled", False)
         self._activation_selector.addItem("Enabled", True)
         self._activation_selector.currentIndexChanged.connect(
@@ -74,16 +74,16 @@ class KeyboardMovementControl(QGroupBox):
             ),
             start=1,
         ):
-            mapping_label = QLabel(mapping, self)
+            mapping_label = QLabel(mapping, self.content_group_box)
             mapping_label.setStyleSheet("font-weight: 600;")
             layout.addWidget(mapping_label, row_index, 0)
-            layout.addWidget(QLabel(":", self), row_index, 1)
+            layout.addWidget(QLabel(":", self.content_group_box), row_index, 1)
             layout.addWidget(selector, row_index, 2)
             self._movement_controls.extend((mapping_label, selector))
-        speed_label = QLabel("Speed", self)
+        speed_label = QLabel("Speed", self.content_group_box)
         layout.addWidget(speed_label, 4, 0)
-        layout.addWidget(QLabel(":", self), 4, 1)
-        self._speed_selector = QDoubleSpinBox(self)
+        layout.addWidget(QLabel(":", self.content_group_box), 4, 1)
+        self._speed_selector = QDoubleSpinBox(self.content_group_box)
         self._speed_selector.setRange(self.MINIMUM_SPEED_MM_S, self.MAXIMUM_SPEED_MM_S)
         self._speed_selector.setDecimals(3)
         self._speed_selector.setSingleStep(1.0)
@@ -108,7 +108,7 @@ class KeyboardMovementControl(QGroupBox):
         return True
 
     def _create_distance_selector(self) -> QDoubleSpinBox:
-        selector = QDoubleSpinBox(self)
+        selector = QDoubleSpinBox(self.content_group_box)
         selector.setRange(self.MINIMUM_DISTANCE_MM, self.MAXIMUM_DISTANCE_MM)
         selector.setDecimals(3)
         selector.setSingleStep(1.0)
