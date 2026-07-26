@@ -9,25 +9,25 @@ The launchers install `uv`, Python 3.12, and dependencies. Internet access is re
 ### Linux
 
 ```bash
-./Position_Controller_Linux.sh
+./Linux_Position_Controller.sh
 ```
 
 ### macOS
 
 ```bash
-./Position_Controller_Mac.command
+./Mac_Position_Controller.command
 ```
 
 If macOS blocks a downloaded launcher, enable it with:
 
 ```bash
 xattr -dr com.apple.quarantine .
-chmod +x Position_Controller_Mac.command
+chmod +x Mac_Position_Controller.command
 ```
 
 ### Windows
 
-Double-click `Position_Controller_Windows.bat`, or run it from Command Prompt.
+Double-click `Windows_Position_Controller.bat`, or run it from Command Prompt.
 
 ### Developer execution
 
@@ -45,8 +45,8 @@ without connecting physical hardware. On macOS and Linux, start it from another 
 platform launcher:
 
 ```bash
-./Position_Controller_Linux.sh fake-serial-port
-./Position_Controller_Mac.command fake-serial-port
+./Linux_Position_Controller.sh fake-serial-port
+./Mac_Position_Controller.command fake-serial-port
 ```
 
 The port appears in the device selector within five seconds. Bytes sent to it are printed by the
@@ -65,12 +65,12 @@ The release workflow requires Git, push access to the repository, and the GitHub
 Run the platform launcher with the `release` argument:
 
 ```bash
-./Position_Controller_Linux.sh release
-./Position_Controller_Mac.command release
+./Linux_Position_Controller.sh release
+./Mac_Position_Controller.command release
 ```
 
 On Windows:
 
 ```bat
-Position_Controller_Windows.bat release
+Windows_Position_Controller.bat release
 ```
