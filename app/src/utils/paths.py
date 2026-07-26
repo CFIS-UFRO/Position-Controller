@@ -12,6 +12,7 @@ PROJECT_DIR: Path = APP_DIR.parent
 SRC_DIR: Path = APP_DIR / "src"
 ASSETS_DIR: Path = SRC_DIR / "assets"
 HELP_DIR: Path = ASSETS_DIR / "help"
+ICONS_DIR: Path = ASSETS_DIR / "icons"
 LOGS_DIR: Path = APP_DIR / "logs"
 USER_DATA_DIR: Path = APP_DIR / "usr"
 FAKE_SERIAL_PORTS_DIR: Path = USER_DATA_DIR / "fake_serial_ports"
@@ -26,6 +27,8 @@ RELEASES_FILE_PATH: Path = APP_DIR / "releases.json"
 LOG_FILE_PATH: Path = LOGS_DIR / f"{APP_SLUG}.log"
 ICON_FILE_PATH: Path = ASSETS_DIR / "icon.png"
 HELP_INDEX_FILE_PATH: Path = HELP_DIR / "index.json"
+HELP_BLACK_ICON_FILE_PATH: Path = ICONS_DIR / "help_black.svg"
+HELP_WHITE_ICON_FILE_PATH: Path = ICONS_DIR / "help_white.svg"
 
 # --------------------------------------------------------------------------------------------------
 # Getters
@@ -53,6 +56,10 @@ def get_help_dir_path() -> Path:
 def get_help_index_file_path() -> Path:
     """Return the help manual index path."""
     return HELP_INDEX_FILE_PATH
+# --------------------------------------------------------------------------------------------------
+def get_help_icon_file_path(is_dark_mode: bool = False) -> Path:
+    """Return the help icon path for the current color theme."""
+    return HELP_WHITE_ICON_FILE_PATH if is_dark_mode else HELP_BLACK_ICON_FILE_PATH
 # --------------------------------------------------------------------------------------------------
 def get_logs_dir_path() -> Path:
     """Return the logs directory."""
