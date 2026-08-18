@@ -71,12 +71,14 @@ class ReleaseUpdateWindow(QDialog):
         # Development-checkout warning
         if self._updates_disabled_by_git:
             git_warning_label = QLabel(
-                "Git repository detected. In-app installation is disabled for development checkouts.",
+                "Git repository detected.\n"
+                "In-app updates are disabled.\n"
+                "Run 'git pull' from the project directory to download and apply the latest changes.",
                 self,
             )
             git_warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             git_warning_label.setWordWrap(True)
-            git_warning_label.setStyleSheet("color: #c62828;")
+            git_warning_label.setStyleSheet("font-weight: 600;")
             self._layout.addWidget(git_warning_label)
 
     def check_for_updates(self) -> None:
