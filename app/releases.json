@@ -15,6 +15,28 @@
         "Added the official application icon",
         "Added automated GitHub release packaging and release-history support"
       ]
+    },
+    {
+      "version": "1.0.0",
+      "created_at_utc": "2026-08-18T15:27:07.140819+00:00",
+      "changes": [
+        "First stable release",
+        "Added automatic serial-port discovery and monitoring",
+        "Added configuration for up to eight devices with independent serial ports and baud rates",
+        "Added asynchronous multi-device serial communication with connection-status indicators",
+        "Added G-code controls for relative and absolute movement, homing, origin setting, and configurable speed",
+        "Added application-wide keyboard movement controls for the X, Y, and Z axes",
+        "Added support for broadcasting custom messages to all connected devices",
+        "Added a resizable terminal with application logs and color-coded serial messages",
+        "Added buffered serial reads for partial and high-volume incoming data",
+        "Added contextual help and documentation for the new controls",
+        "Added a fake serial-port development helper for Linux and macOS",
+        "Added asynchronous update checking during application startup",
+        "Improved the application layout, startup sizing, icon, and theme detection",
+        "Improved update cleanup and Git-related guidance",
+        "Renamed platform launchers to place the operating-system name first",
+        "Updated launchers to require the uv-managed Python environment"
+      ]
     }
   ]
 }
