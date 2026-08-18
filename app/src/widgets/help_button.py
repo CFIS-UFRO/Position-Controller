@@ -1,9 +1,10 @@
 """Reusable theme-aware help button."""
 
 from PySide6.QtCore import QEvent, QSize, Qt
-from PySide6.QtGui import QIcon, QPalette
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QPushButton, QSizePolicy, QWidget
 
+from src.utils.colors import is_dark_mode
 from src.utils.paths import get_help_icon_file_path
 from src.windows.help_window import HelpWindow
 
@@ -45,13 +46,9 @@ class HelpButton(QPushButton):
         super().changeEvent(event)
 
     def _configure_icon(self) -> None:
-        icon_file_path = get_help_icon_file_path(self._is_dark_mode())
+        icon_file_path = get_help_icon_file_path(is_dark_mode())
         if icon_file_path.exists():
             self.setIcon(QIcon(str(icon_file_path)))
-
-    def _is_dark_mode(self) -> bool:
-        window_color = self.palette().color(QPalette.ColorRole.Window)
-        return window_color.lightness() < 128
 
     def _open_help_window(self) -> None:
         if self._help_window is None:

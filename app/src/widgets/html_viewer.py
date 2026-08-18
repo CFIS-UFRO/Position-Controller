@@ -2,8 +2,9 @@
 
 from dataclasses import dataclass
 
-from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import QApplication, QTextBrowser, QWidget
+
+from src.utils.colors import is_dark_mode
 
 # --------------------------------------------------------------------------------------------------
 # Style
@@ -63,8 +64,7 @@ class HtmlViewer(QTextBrowser):
         )
 
     def _get_theme_colors(self) -> dict[str, str]:
-        window_color = self.palette().color(QPalette.ColorRole.Window)
-        if window_color.lightness() < 128:
+        if is_dark_mode():
             return {
                 "background": "#242629",
                 "text": "#f1f3f5",
